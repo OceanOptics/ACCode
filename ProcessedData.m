@@ -422,8 +422,8 @@ classdef ProcessedData < handle
 
             data = dataIn.data;
             time = dataIn.timestamps;
-            obj.L.info('ProcessedData.processFSW', sprintf('First timestamp to be binned: %s', datestr(time(1))));
-            obj.L.info('ProcessedData.processFSW', sprintf('Last  timestamp to be binned: %s', datestr(time(end))));
+            obj.L.debug('ProcessedData.processFSW', sprintf('First timestamp to be binned: %s', datestr(time(1))));
+            obj.L.debug('ProcessedData.processFSW', sprintf('Last  timestamp to be binned: %s', datestr(time(end))));
             
             binSize = binSizeIn;
             UPPER_PERCENTILE = obj.meta.Params.PROCESS.UPPER_PERCENTILE;
@@ -433,9 +433,9 @@ classdef ProcessedData < handle
             % CHAGNED FOR NAAMES -- MISMATCH BETWEEN DEVICE FILE AND DATA
 %            numberWavelengths = obj.meta.numWavelengths;
             [rows,cols] = size(data);
-            obj.L.info('ProcessedData.processFSW',sprintf('size of data: %u x %u', rows, cols));
+            obj.L.debug('ProcessedData.processFSW',sprintf('size of data: %u x %u', rows, cols));
             numberWavelengths = cols;
-            obj.L.info('ProcessedData.processFSW',sprintf('numberWavelengths: %u', numberWavelengths));
+            obj.L.debug('ProcessedData.processFSW',sprintf('numberWavelengths: %u', numberWavelengths));
             % END CHANGE FOR NAAMES
             
             % set up flags - one per original data point
@@ -463,9 +463,9 @@ classdef ProcessedData < handle
             binned_time = start_time:binSize:end_time;
             numberBins = numel(binned_time);
             
-            obj.L.info('ProcessedData.processFSW', sprintf('Number of bins: %u', numberBins));
-            obj.L.info('ProcessedData.processFSW', sprintf('First bin: %s', datestr(binned_time(1))));
-            obj.L.info('ProcessedData.processFSW', sprintf('Last  bin: %s', datestr(binned_time(end))));
+            obj.L.debug('ProcessedData.processFSW', sprintf('Number of bins: %u', numberBins));
+            obj.L.debug('ProcessedData.processFSW', sprintf('First bin: %s', datestr(binned_time(1))));
+            obj.L.debug('ProcessedData.processFSW', sprintf('Last  bin: %s', datestr(binned_time(end))));
 
             % create an index of the bins
             binIndexNumbers = zeros(size(time));
@@ -858,18 +858,35 @@ classdef ProcessedData < handle
             offsetfiltBinIndex(1,:) = NaN;
             offsetfiltBinIndex(2:end,:) = filtBinIndex(1:end-1);
             transitionIndex = filtBinIndex - offsetfiltBinIndex;
-             
+%              disp('startsectionindex')
             startSectionIndex  = find(transitionIndex == 1);
+%             disp('endsectionindex')
             endSectionIndex = find(transitionIndex == -1);
             % decrease section by one
+%             disp('endsectionindex after decrease')
             endSectionIndex = endSectionIndex -1;
+%             disp('numsections:')
             numSections = size(startSectionIndex);
+            
+            if length(startSectionIndex) > length(endSectionIndex)
+                %ending in middle of FSW
+                newEndSectionIndex = zeros(length(endSectionIndex)+1,1);
+%                 size(newEndSectionIndex)
+%                 size(endSectionIndex)
+                newEndSectionIndex(1:end-1) = endSectionIndex(:,:);
+                newEndSectionIndex(end) = length(filtBinIndex);
+                endSectionIndex = newEndSectionIndex;
+            end;
 
             % for each section
             for iSection = 1:numSections;
 
                  % create a temporary section the size of the current
                  % section of interpolated data
+%                  disp('endsectionindex')
+                 endSectionIndex(iSection);
+%                  disp('startsectionindex')
+                 startSectionIndex(iSection);
                  currSection = zeros( endSectionIndex(iSection) - startSectionIndex(iSection) + 1, numCols);
                  currSection(:,:) = NaN;
                  
@@ -1042,7 +1059,7 @@ classdef ProcessedData < handle
             % what is this for?
             filtBinIndex = ~nanDataBinIndex;
             
-            size(filtBinIndex)
+%             size(filtBinIndex)
 
             % blank any bins that are totally nan
             FSWBinsNoNans(nanDataBinIndex, :) = [];  % new array with just data
@@ -1052,7 +1069,9 @@ classdef ProcessedData < handle
             % make copy of filtered_data for interpolated data to go INTO
             % this is copy of original so WILL contain NaNs.
             % new_filtered_data = filtered_bins;
-            interpolatedFSWData = interp1(binTimestampsNoNans, FSWBinsNoNans, binTimestamps);
+%             interpolatedFSWData = interp1(binTimestampsNoNans, FSWBinsNoNans, binTimestamps);
+            interpolatedFSWData = interp1(binTimestampsNoNans, FSWBinsNoNans, binTimestamps, ...
+                'linear', 'extrap');          
             newDataIndex = ~all(isnan(interpolatedFSWData),2);
 
             % an index to the interpolated bins will be the OPPOSITE of:
@@ -1100,10 +1119,63 @@ classdef ProcessedData < handle
              offsetInterpBinIndex(2:end,:) = interpBinIndex(1:end-1);
              transitionIndex = interpBinIndex - offsetInterpBinIndex;
              
+             %switched
+             % find where the transitionIndex is 1, this will be where to
+             % start a new seciton.
              startSectionIndex  = find(transitionIndex == 1);
-             endSectionIndex = find(transitionIndex == -1);
-             numSections = size(startSectionIndex);
              
+              %find where transitinIndex is -1, this will mark end of
+             %section
+             endSectionIndex = find(transitionIndex == -1);
+             
+             startStartsAtBeginning = (length(find(startSectionIndex == 1)) > 0);
+             endStartsAtBeginning = (length(find(endSectionIndex == 1)) > 0);
+             startEndsAtEnd = (length(find(startSectionIndex == numBins)) > 0);
+             endEndsAtEnd = (length(find(endSectionIndex == numBins)) > 0);
+             
+             if ~(startStartsAtBeginning || endStartsAtBeginning || startEndsAtEnd || endEndsAtEnd)
+                 % none of them start/end at start or end
+                 % create a new index, one longer than existing
+                 newStartSectionIndex = zeros((length(startSectionIndex) + 1), 1);
+                 newStartSectionIndex(1,1) = 1;  % set first one to start
+                 % copy rest in
+                 newStartSectionIndex(2:end,1) = startSectionIndex;
+
+                 newEndSectionIndex = zeros((length(startSectionIndex) + 1),1);
+                 % create a new index to account for end, copy in existing
+                 % index and subtract one to move backwards
+%                  size(endSectionIndex)
+                 newEndSectionIndex(1:end-1,1) = endSectionIndex-1;
+                 newEndSectionIndex(end,1) = length(transitionIndex);
+             else
+                 % one of them starts/ends at start/end
+                 if startStartsAtBeginning
+                     newStartSectionIndex = startSectionIndex;
+                 else
+                     % create a new index, one longer than existing
+                     newStartSectionIndex = zeros((length(startSectionIndex) + 1), 1);
+                     newStartSectionIndex(1,1) = 1;  % set first one to start
+                     newStartSectionIndex(2:end,1) = startSectionIndex;
+                 end;
+                 if endEndsAtEnd
+
+                     % create a new index to account for end, copy in existing
+                     % index and subtract one to move backwards
+                     newEndSectionIndex = endSectionIndex-1;
+                 else
+                     newEndSectionIndex = zeros((length(endSectionIndex) + 1),1);
+                     % create a new index to account for end, copy in existing
+                     % index and subtract one to move backwards
+                     newEndSectionIndex(1:end-1,1) = endSectionIndex-1;
+                     newEndSectionIndex(end,1) = length(transitionIndex); 
+                 end;
+
+             end
+             
+             % copy over to previous names so code runs
+             startSectionIndex = newStartSectionIndex;
+             endSectionIndex = newEndSectionIndex;
+             numSections = length(startSectionIndex);
              % for each section
              for iSection = 1:numSections;
                  
@@ -1210,8 +1282,8 @@ classdef ProcessedData < handle
                 % 2.  calculate uncertainty
                 % UNCERTAINTY =  InterpolatedBinUncertainty PLUS
                 % TSWBinUncertainty
-                size(interpBinUncertainty)
-                size(tswBinUncertainty)
+%                 size(interpBinUncertainty)
+%                 size(tswBinUncertainty)
                 totalUncertainty = interpBinUncertainty + tswBinUncertainty;
                 
                 % 3.  Now that cp is calculated, remove timestamps from
@@ -1523,7 +1595,8 @@ classdef ProcessedData < handle
             % call function and set vars
             if strcmp(typeIn, 'SLADE')
               obj.L.debug('ProcessedData.scatteringCorr', 'SLADE');
-              [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr( apUncorr, cpUncorr, wavelengths, psiT, 'Slade');
+              [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ...
+                  ResidTempScatCorr( apUncorr, cpUncorr, wavelengths, psiT, 'Slade');
 
               obj.setVar('ap', 'corrected', 'data_slade', ap_TSalScatCorr);
               obj.setVar('ap', 'corrected', 'uncorr_ref_slade', ap_uncorr_ref);
@@ -1533,7 +1606,8 @@ classdef ProcessedData < handle
 
             elseif strcmp(typeIn, 'ROTTGERS')
               obj.L.debug('ProcessedData.scatteringCorr', 'ROTTGERS');
-              [ap_TSalScatCorr, ~, fiterr, deltaT] = ResidTempScatCorr( apUncorr, cpUncorr, wavelengths, psiT, 'Rottgers');
+              [ap_TSalScatCorr, ~, fiterr, deltaT] = ...
+                  ResidTempScatCorr( apUncorr, cpUncorr, wavelengths, psiT, 'Rottgers');
 
               obj.setVar('ap', 'corrected', 'data_rottgers', ap_TSalScatCorr);
               obj.setVar('ap', 'corrected', 'wavelengths_rottgers', wavelengths);
@@ -1542,7 +1616,8 @@ classdef ProcessedData < handle
 
             elseif strcmp(typeIn, 'FLAT')
               obj.L.debug('ProcessedData.scatteringCorr', 'FLAT');
-              [ap_TSalScatCorr, ~, fiterr, deltaT] = ResidTempScatCorr( apUncorr, cpUncorr, wavelengths, psiT, 'Flat');
+              [ap_TSalScatCorr, ~, fiterr, deltaT] = ...
+                  ResidTempScatCorr( apUncorr, cpUncorr, wavelengths, psiT, 'Flat');
               obj.setVar('ap', 'corrected', 'data_flat', ap_TSalScatCorr);
               obj.setVar('ap', 'corrected', 'wavelengths_flat', wavelengths);
               obj.setVar('ap', 'corrected', 'fiterr_flat', fiterr);

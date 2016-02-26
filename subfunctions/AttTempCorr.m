@@ -49,7 +49,7 @@ function [cpCorr, fiterr] = AttTempCorr(cpUncorrIn, wavelengthsIn, psiTIn, metho
         if isempty( cpUncorrIn )
             L.error('AttTempCorr', 'Need uncorrected cp data');
         else
-            L.info('AttTempCorr', sprintf('size of cpUncorrIn: %u %u', size(cpUncorrIn)));
+            L.debug('AttTempCorr', sprintf('size of cpUncorrIn: %u %u', size(cpUncorrIn)));
         end;
         if isempty( wavelengthsIn )
             L.error('AttTempCorr', 'Need vector of wavelengths');
@@ -72,8 +72,8 @@ function [cpCorr, fiterr] = AttTempCorr(cpUncorrIn, wavelengthsIn, psiTIn, metho
                 if all(isnan(deltaTIn))
                     L.error('AttTempCorr', 'deltaT is all nan');
                 else
-                    L.info('AttTempCorr', 'deltaT is OK');
-                    L.info('AttTempCorr', sprintf('size of deltaTIn: %u %u', size(deltaTIn)));
+                    L.debug('AttTempCorr', 'deltaT is OK');
+                    L.debug('AttTempCorr', sprintf('size of deltaTIn: %u %u', size(deltaTIn)));
                 end;
                 
             elseif strcmpi( method, 'WITHOUTA');
@@ -151,7 +151,7 @@ function [cpCorr, fiterr] = AttTempCorr(cpUncorrIn, wavelengthsIn, psiTIn, metho
                     if all(isnan(cpUncorrIn(k,:)))
                         L.error('AttTempCorr',sprintf('cpUncorr is nan where k: %u',k));
                     else
-                        L.info('AttTempCorr', 'cpUncorr not nan');
+                        L.debug('AttTempCorr', 'cpUncorr not nan');
                         
                     end
                     if isnan(psiTIn)
@@ -167,7 +167,7 @@ function [cpCorr, fiterr] = AttTempCorr(cpUncorrIn, wavelengthsIn, psiTIn, metho
                     if isnan( f_ATT(x0, cpUncorrIn(k,:), psiTIn, NIR, wavelengths))
                         L.error('AttTempCorr','f_ATT returns nan')
                     else
-                        L.info('AttTempCorr','f_ATT doesn''t return nan')
+                        L.debug('AttTempCorr','f_ATT doesn''t return nan')
                     end
                         
                     

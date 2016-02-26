@@ -14,9 +14,6 @@ classdef ACData < AncillaryData
         SmoothData
         PPTimespan = 19200;
         SamplingFreq = 240;
-%         FSWFreq = 30;      %number of minutes 50 == every 50 minutes
-%         TSWDuration = 25;
-%         FSWDuration = 5;
         
         FSWFreq = 50;      %number of minutes 50 == every 50 minutes
         TSWDuration = 40;
@@ -92,10 +89,10 @@ classdef ACData < AncillaryData
             goodEnds = goodEnds(~isnan(goodEnds));
                
             % now only use good start times
-            size(obj.TransStartTime)
-            size(goodStarts)
-            size(obj.TransEndTime)
-            size(goodEnds)
+%             size(obj.TransStartTime)
+%             size(goodStarts)
+%             size(obj.TransEndTime)
+%             size(goodEnds)
             
 %             % create an index to the good times/data in the original list
 %             [~,ind1] = min(abs(bsxfun(@minus,datenum(obj.TransStartTime),datenum(goodStarts)')));
@@ -115,8 +112,8 @@ classdef ACData < AncillaryData
 
             [~,ind1] = min(abs(bsxfun(@minus,datenum(obj.DataObject.Time),datenum(goodEnds)')));
             goodEndData = obj.DataObject.Data(ind1,20);
-            size(ind1)
-            size(goodEndData)
+%             size(ind1)
+%             size(goodEndData)
             
             
             
@@ -128,9 +125,9 @@ classdef ACData < AncillaryData
             obj.GoodFSWEndData = goodEndData;
             obj.GoodFSWEndTimes = goodEnds;
              
-             for i = 1:length(obj.GoodFSWStartTimes)
-                sprintf('%s %s', datestr(obj.GoodFSWStartTimes(i)), datestr(obj.GoodFSWEndTimes(i)))
-            end;
+%             for i = 1:length(obj.GoodFSWStartTimes)
+%                 sprintf('%s %s', datestr(obj.GoodFSWStartTimes(i)), datestr(obj.GoodFSWEndTimes(i)))
+%             end;
             
            
         end
@@ -141,10 +138,10 @@ classdef ACData < AncillaryData
             goodEnds = goodEnds(~isnan(goodEnds));
                
             % now only use good start times
-            size(obj.TSWStartTime)
-            size(goodStarts)
-            size(obj.TSWEndTime)
-            size(goodEnds)
+%             size(obj.TSWStartTime)
+%             size(goodStarts)
+%             size(obj.TSWEndTime)
+%             size(goodEnds)
             
             % find matching data to timestamps:
             
@@ -169,9 +166,9 @@ classdef ACData < AncillaryData
             obj.GoodTSWEndData = goodEndData;
             obj.GoodTSWEndTimes = goodEnds;
              
-             for i = 1:length(obj.GoodTSWStartTimes)
-                sprintf('%s %s', datestr(obj.GoodTSWStartTimes(i)), datestr(obj.GoodTSWEndTimes(i)))
-            end;
+%              for i = 1:length(obj.GoodTSWStartTimes)
+%                 sprintf('%s %s', datestr(obj.GoodTSWStartTimes(i)), datestr(obj.GoodTSWEndTimes(i)))
+%             end;
             
            
         end
@@ -404,8 +401,8 @@ classdef ACData < AncillaryData
                     sprintf('synced data object start time: %s, end time: %s', ...
                     datestr(obj.SyncDataObject.Time(1)), datestr(obj.SyncDataObject.Time(end))));
                 
-                disp('1st good starts before')
-                datestr(obj.GoodTSWStartTimes(1))
+%                 disp('1st good starts before')
+%                 datestr(obj.GoodTSWStartTimes(1))
                 
                 
                 obj.GoodTSWStartTimes = obj.GoodTSWStartTimes + offset;
@@ -415,8 +412,8 @@ classdef ACData < AncillaryData
                 
                 
                 
-                disp('1st good starts after')
-                datestr(obj.GoodTSWStartTimes(1))
+%                 disp('1st good starts after')
+%                 datestr(obj.GoodTSWStartTimes(1))
                 
             else
                 obj.L.error('ACData.syncTo', 'No good transitions to sync to!');
@@ -723,10 +720,9 @@ classdef ACData < AncillaryData
             end;
             
             ts = obj.DataObject;
-            obj.Name
             plot(ts.Time, ts.Data(:,20), ':bo', ...
                 'MarkerSize', 3, ...
-                'MarkerFaceColor', 'b')
+                'MarkerFaceColor', 'b');
             
             xlabel('Timestamp')
             ylabel(obj.Name)
@@ -833,7 +829,7 @@ classdef ACData < AncillaryData
         
         
         function plotSyncData(obj)
-            plot(obj.SyncDataObject.Time, obj.SyncDataObject.Data(:,20), 'k')
+            plot(obj.SyncDataObject.Time, obj.SyncDataObject.Data(:,20), 'k');
             legend(obj.Name);
         end
         

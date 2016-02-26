@@ -21,8 +21,8 @@ inTSW = zeros( size( a.data(startRow:endRow) ));
 inTSW(:,:) = NaN;
 inTSW = a.data >= threshold;
 %added:
-% TSWdat = a.data(inTSW);
-% FSWdat = a.data(~inTSW);
+TSWdat = a.data(inTSW);
+FSWdat = a.data(~inTSW);
 
 %%
 for iRow = startRow:endRow %1:57600;  %1:10000 %nRows
@@ -45,10 +45,10 @@ for iRow = startRow:endRow %1:57600;  %1:10000 %nRows
      runData = a.data(iStartBack:iRow);
      runTSWIdx = inTSW(iStartBack:iRow);
     if (inTSW(iRow)) % if we are inTSW
-        runningTSWmedian(iRow) = mean(runData(runTSWIdx));
+        runningTSWmedian(iRow) = median(runData(runTSWIdx));
 %         runningTSWmedian(iRow) = mean(TSWdat(iStartBack:iRow));
     else
-        runningFSWmedian(iRow) = mean(runData(~runTSWIdx));
+        runningFSWmedian(iRow) = median(runData(~runTSWIdx));
 %         runningFSWmedian(iRow) = mean(FSWdat(iStartBack:iRow));
     end
     

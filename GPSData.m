@@ -152,10 +152,8 @@ classdef GPSData < AncillaryData
           end   % end Bin()
         
         function plotData(obj)
-            disp('Stub for plotData() in GPSData:');
             ts = obj.DataObject;
-            obj.Name
-            scatter(ts.Data(:,1), ts.Data(:,2), [], ts.Time)
+            scatter(ts.Data(:,1), ts.Data(:,2), [], ts.Time);
             xlabel('Latitude')
             ylabel('Longitude')
             title(obj.Name)

@@ -101,14 +101,14 @@ classdef SalinityData < AncillaryData
             elseif strcmpi(methodIn, 'bin')
                 data = obj.DataObject.Data;
                 time = obj.DataObject.Time;
-                size(time)
-                size(data)
+%                 size(time)
+%                 size(data)
                 % limit to AC bin size
                 startTimestamp = timestampsIn(1);
                 endTimestamp = timestampsIn(end);
                 
-                datestr(startTimestamp)
-                datestr(endTimestamp)
+%                 datestr(startTimestamp)
+%                 datestr(endTimestamp)
                 
                 % check for timestamps before first timestamps or after
                 % last timestamp

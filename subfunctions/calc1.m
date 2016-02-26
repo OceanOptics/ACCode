@@ -40,7 +40,7 @@ runningMedForw(:,:) = NaN;
         runningdataforward = a.data(iRow:iEndForward);
 
         runningMinForw(iRow) = min(runningdataforward);
-        runningMedForw(iRow) = mean(runningdataforward);    
+        runningMedForw(iRow) = median(runningdataforward);    
 
 
 

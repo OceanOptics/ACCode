@@ -38,7 +38,6 @@ classdef ACPlusAncillaryData
     end
     methods
         function obj = ACPlusAncillaryData( DeviceFileIn, DataTypesIn, IngestParamsIn )
-            nargin
             if nargin > 0 
                 % set device file
                 if isa( DeviceFileIn, 'ACDeviceFile' )

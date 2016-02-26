@@ -46,7 +46,14 @@ function [abscorr] = spectral_unsmooth( wl, ap, acs)   % ~ is wlunc, apunc
 % to:
 % absspec(maxwavel*10+1:max(size(wavelength)))=absspec(maxwavel*10);%0;
 
+
+% acs=1;
+% wl=[400:2:750];
+% ap=exp(-0.014*wl);
+% ap=exp(-((wl-550).^2)/100);
+
 %------------- BEGIN CODE --------------
+
 disp('start spectral_unsmooth')
 ap_all = ap; %pd.apUncorr;
 % nanind = sum(isnan(ap_all),2) > 0;
@@ -81,11 +88,9 @@ if acs==1;  % if AC-S
                 wl=wl';
             end
 
-
-
             % Set up filter factors at every 0.1 nm from 1 to 799 nm, with center
             % wavelength at centwavel (i.e. at the data wavelengths)
-            wavelength=.1:.1:799; % Thus index of 1 nm = 10; 356 nm= 3560;
+            wavelength=350:.1:799; % Thus index of 1 nm = 10; 356 nm= 3560;
             clear filtfunc
             SIG1=(-9.845*10^-8.*wl.^3  +1.639*10^-4*wl.^2- 7.849*10^-2*wl + 25.24)/2.3547 ;
             for i=1:max(size(wl));
@@ -112,22 +117,19 @@ if acs==1;  % if AC-S
             for ii=numbits;
                 xixi=minwavel:.1:maxwavel;% The range of centwavel is 0.1 nm.
                 yiyi=spline(wl,ap,xixi); % Spline the measured data to every 0.1 nm.
-                % We need data from 0 to 799 nm to multiply by filtfac.
+                % We need data from 350nm to 799 nm to multiply by filtfac.
                 absspec=zeros(size(wavelength));
-                absspec(minwavel*10:maxwavel*10)=yiyi;
-                absspec(1:minwavel*10-1)=absspec(minwavel*10);
-                absspec(maxwavel*10+1:max(size(wavelength)))=absspec(maxwavel*10);%0;
+                absspec((minwavel-350)*10+1:(maxwavel-350)*10+1)=yiyi;
+                absspec(1:(minwavel-350)*10)=interp1(wl,ap,wavelength(1:(minwavel-350)*10),'linear','extrap');
+                absspec((maxwavel-350)*10+2:length(wavelength))=absspec((maxwavel-350)*10+1);%0;
                 aspecprime=absspec';
 
-                clear measur2 meassignal6
-                for i=1:min(size(filtfunc));% for all filters
-                    measur2(:,i)=aspecprime(:,1).*filtfunc(:,i); % the measured signal for every filter factor.
-                    meassignal6(i)=0.1*sum(measur2(:,i)); % The measured spectrum at a wavelength i is the sum of what a filter measured at
-                    %all wavelengths times 0.1 as we did it at every nm..
-                end
-
-                abscorr=ap-meassignal6'+ap;
-                if max((ap-meassignal6')/ap)<=error
+                clear meassignal6
+                
+                meassignal6=0.1*filtfunc'*aspecprime;
+                
+                abscorr=ap-meassignal6+ap;
+                if max((ap-meassignal6)/ap)<=error
                     break
                 end     
 
@@ -150,7 +152,7 @@ end
 % set return variable
 abscorr = abscorr_out;
 
-end   % end function
+%end   % end function
 
 %------------- END OF CODE --------------
 

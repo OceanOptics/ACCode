@@ -17,15 +17,11 @@
 % MISCLab, University of Maine
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
-% May 2015; Last revision: 13-08-15
+% May 2015; Last revision: 16-Feb-16
 % 
 
 %----------------------------- BEGIN CODE ---------------------------------
-%%Load data file from disk
-% Set to TRUE if opening raw data file from disk
-% Set to FALSE if running automatically (from script) or you've been
-% running it manually and have just run IngestManager and data objects are
-% still in memory.
+%%Load data file from disk if necessary
 
 if params.RUN.LOAD_OUTPUT_DATA_FROM_DISK
 
@@ -37,18 +33,8 @@ if params.RUN.LOAD_OUTPUT_DATA_FROM_DISK
         strcat('acsPREPROC', '_', num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY)));
     load(matFileName);  
     
-    paramsFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, 'params');
-    load(paramsFileName);  
-    
 end;
 
-% %
-% % LOGGING SETUP 
-% % create log file 
-% L = log4m.getLogger(params.RUN.LOG_FILE);
-% 
-% % set output level
-% L.setCommandWindowLevel(L.INFO);
    
 %% ----------------------------------------------------------------------- 
 % SECTION 1: OUTPUT SEABASS FILES
@@ -109,22 +95,22 @@ wavelengths = pd.var.ap.L8.wavelengths_slade;
 % check timestamps are all the same
 % CHANGED 10/22
 if checkTimestamps(ap_timestamps, cp_timestamps)
-    L.info('OutputManager', 'a and c timestamps same')
+    L.debug('OutputManager', 'a and c timestamps same')
 else
     L.error('OutputManager', 'a and c timestamps diff')
 end;
 if checkTimestamps(ap_timestamps, temp_timestamps)
-    L.info('OutputManager', 'a and temp timestamps same')
+    L.debug('OutputManager', 'a and temp timestamps same')
 else
     L.error('OutputManager', 'a and temp timestamps diff')
 end;
 if checkTimestamps(ap_timestamps, gps_timestamps)
-    L.info('OutputManager', 'a and gps timestamps same')
+    L.debug('OutputManager', 'a and gps timestamps same')
 else
     L.error('OutputManager', 'a and gps timestamps diff')
 end;
 if checkTimestamps(ap_timestamps, sal_timestamps)
-    L.info('OutputManager', 'a and sal timestamps same')
+    L.debug('OutputManager', 'a and sal timestamps same')
 else
     L.error('OutputManager', 'a and sal timestamps diff')
 end;
@@ -209,8 +195,8 @@ westLon = min(lon_data);
 % ----------------------------------------------------------------------
 % Step 1: Set up variables
 % ----------------------------------------------------------------------
-sb_fname_xls = ['Tara_ACS_apcp' num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY) '.xls'];
-sb_fname_ascii = ['Tara_ACS_apcp' num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY)];
+sb_fname_xls = [params.OUTPUT.SEABASS_FILE_PREFIX num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY) '.xls'];
+sb_fname_ascii = [params.OUTPUT.SEABASS_FILE_PREFIX num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY)];
 cruise = strrep(params.INGEST.CRUISE_LEG, ' ', '');
 
 data = {ap_data_slade, ap_data_rottgers, cp_data, ap_uncertainty, cp_uncertainty};
@@ -225,16 +211,11 @@ for iData = 1:length(data)
     thisFileName = dataFiles{iData}; %;
     thisPrefix = wlPrefix{iData}; %;
 
-%     size(lat_data)
-%     size(lon_data)
-%     size(temp_data)
-%     size(sal_data)
-%     size(thisData)
     data_to_print = [lat_data lon_data temp_data sal_data thisData];
     data_to_print = data_to_print(goodrows,:);
 
     % create list of units, get rid of last ','
-    apcp_units = char(repmat(uint8(strcat(params.INGEST.AC_UNITS, ',')), 1, length(wavelengths)+1));
+    apcp_units = char(repmat(uint8(strcat(params.INGEST.AC_UNITS, ',')), 1, length(wavelengths)));
     apcp_units(length(apcp_units)) = '';
 
     % build the extension name from the dataFile
@@ -245,17 +226,18 @@ for iData = 1:length(data)
     % put all these fields into a matrix
     sb_hdr = [sb_hdr strcat('ap', cellstr(num2str(wavelengths)))'];
     % remove whitespace
-    sb_hdr=strrep(sb_hdr, ' ', '');
+    sb_hdr = strrep(sb_hdr, ' ', '');
 
     % name file
     % fpath='d:\misclab\tara\Tara Processing\working\';
-    fid = fopen(seabassFileName, 'wt');
-
+%     fid = fopen(seabassFileName, 'wt');
+    fid = fopen(seabassFileName, 'w', 'n', 'US-ASCII');
+    
     fprintf(fid,'/begin_header\n');
-    fprintf(fid,'/investigators=Emmanuel_Boss\n');
-    fprintf(fid,'/affiliations=UMaine-MISC_Lab,UMaine-MISC_Lab,UMaine-MISC_Lab\n');
-    fprintf(fid,'/contact=emmanuel.boss@maine.edu\n');
-    fprintf(fid,'/experiment=TARA_MED_expedition\n');
+    fprintf(fid,'/investigators=%s\n', params.OUTPUT.INVESTIGATOR );
+    fprintf(fid,'/affiliations=%s\n', params.OUTPUT.AFFILIATION );
+    fprintf(fid,'/contact=%s\n', params.OUTPUT.CONTACT);
+    fprintf(fid,'/experiment=%s\n', params.OUTPUT.EXPERIMENT);
     fprintf(fid,'/cruise=');
     fprintf(fid,cruise);
     fprintf(fid,'\n');
@@ -263,10 +245,10 @@ for iData = 1:length(data)
     fprintf(fid,'/data_file_name=');
     fprintf(fid,strcat(sb_fname_ascii,extension));
     fprintf(fid,'\n');
-    fprintf(fid,'/documents=TARA_MEDdoc.txt\n');
-    fprintf(fid,'/calibration_files=TARA_doc.txt,Instrument_Report_for_Tara-ACs.docx\n');
-    fprintf(fid,'/data_type=flow_thru\n');
-    fprintf(fid,'/data_status=final\n');
+    fprintf(fid,'/documents=%s\n', params.OUTPUT.DOCUMENTATION);
+    fprintf(fid,'/calibration_files=%s\n', params.OUTPUT.CALIBRATION_FILES);
+    fprintf(fid,'/data_type=%s\n', params.OUTPUT.DATA_TYPE);
+    fprintf(fid,'/data_status=%s\n', params.OUTPUT.DATA_STATUS);
     fprintf(fid, '/start_date=%s\n', start_date);
     fprintf(fid, '/end_date=%s\n', end_date);
     fprintf(fid,'/start_time=%s[GMT]\n', start_time);
@@ -276,7 +258,7 @@ for iData = 1:length(data)
     fprintf(fid,'/east_longitude=%5.3f[DEG]\n', eastLon);
     fprintf(fid,'/west_longitude=%5.3f[DEG]\n', westLon);
     fprintf(fid,'/water_depth=NA\n');
-    fprintf(fid,'/measurement_depth=1.5\n'); % not allowed if depth is in the data
+    fprintf(fid,'/measurement_depth=%s\n', params.OUTPUT.MEASUREMENT_DEPTH); % not allowed if depth is in the data
     fprintf(fid,'/secchi_depth=NA\n');
     fprintf(fid,'/cloud_percent=NA\n');
     fprintf(fid,'/wind_speed=NA\n');
@@ -286,9 +268,16 @@ for iData = 1:length(data)
 
     fprintf(fid,'/fields=');
     for j=1:length(sb_hdr)
-        fprintf(fid, '%s,',cell2mat(sb_hdr(j)));
+        if j < length(sb_hdr)
+            fprintf(fid, '%s,',cell2mat(sb_hdr(j)));
+            % added:
+        else
+            fprintf(fid, '%s',cell2mat(sb_hdr(j)));
+        end;
     end
     fprintf(fid,'\n');
+%        fprintf(fid,['/units=yyyymmdd,hh:mm:ss,degrees,degrees,degreesC,PSU,' apcp_units '\n']);
+
     fprintf(fid,['/units=yyyymmdd,hh:mm:ss,degrees,degrees,degreesC,PSU,' apcp_units '\n']);
     fprintf(fid,'/end_header\n');
 
@@ -308,7 +297,11 @@ for iData = 1:length(data)
         fprintf(fid, '%8s ', cell2mat( timestamps_date_to_print( thisRow,1 )));
         fprintf(fid, '%8s ', cell2mat( timestamps_time_to_print( thisRow,1 )));
         % fprintf(fid, '%20s ',cell2mat(sb_datetime(i)));
-        fprintf(fid,'%6.4f ', data_to_print(thisRow,:));
+%         fprintf(fid,'%6.4f ', data_to_print(thisRow,:));
+        % print all columns except last with a space after
+        fprintf(fid,'%6.4f ', data_to_print(thisRow,1:end-1));
+        % print last column without a space
+        fprintf(fid,'%6.4f', data_to_print(thisRow,end));
         fprintf(fid,'\n');
     end
     fclose(fid);
@@ -320,7 +313,7 @@ end   % for loop for data
 % SECTION 2: CREATE FINAL PLOTS
 % -----------------------------------------------------------------------
 %%
-fignum = 31;
+fignum = 41;
 wavelengthToPlot = 20;
 
 figure(fignum);
@@ -335,7 +328,8 @@ dynamicDateTicks;
 xlim([ datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY, 0, 0, 0) ,...
        datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY + 1, 0, 0, 0) ] );
 % ylim([-0.1, .5])
-legend('Synchronized c data', 'FSW Bins', 'Interpolated data');
+% legend('Synchronized c data', 'FSW Bins', 'Interpolated data');
+legend('Synchronized c data', 'FSW Bins');
 title_text = sprintf('Filtered c Data - using median\n Cruise: %s Leg: %s \n%u-%s-%u (Yearday: %u)', ...
     params.INGEST.CRUISE, params.INGEST.CRUISE_LEG, params.INGEST.DAY, ...
     params.INGEST.MONTH_TEXT, params.INGEST.YEAR, params.INGEST.YEAR_DAY);    
@@ -359,13 +353,13 @@ title_text = sprintf('Filtered a Data - using median\n Cruise: %s Leg: %s \n%u-%
 title(title_text,'fontsize',12);
 
 linkaxes([ax1, ax2], 'x')
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), ...
-    '_filtered2')));
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR), ...
-    '_', num2str(params.INGEST.YEAR_DAY), '_filtered2.jpg')));
+    '_', num2str(params.INGEST.YEAR_DAY),  '_filtered')));
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR), ...
+    '_', num2str(params.INGEST.YEAR_DAY), '_filtered.jpg')));
     
 %% FIGURE 2: "PEACHY"
-fignum = 32;
+fignum = 42;
 figure(fignum);
 ax1 = subplot(2,1,1);
 hold on;
@@ -406,11 +400,13 @@ title(title_text,'fontsize',12);
 % 
  linkaxes([ax1, ax2], 'x')
 
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_interp2')));
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR), '_',num2str(params.INGEST.YEAR_DAY), '_interp2.jpg')));    
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+    strcat(num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY), '_interp')));
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+    strcat(num2str(params.INGEST.YEAR), '_',num2str(params.INGEST.YEAR_DAY), '_interp.jpg')));    
 
 %% FIGURE 3: wlap
-fignum=33;
+fignum=43;
 figure(fignum)
 hold on;
 grid on;
@@ -423,13 +419,12 @@ title_text = sprintf('Corrected ap vs. Wavelength\n Cruise: %s Leg: %s \n%u-%s-%
 title(title_text, 'fontsize', 12);
 
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR_DAY), '_wlap')));
+    strcat(num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY), '_wlap')));
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR), '_',num2str(params.INGEST.YEAR_DAY), ...
-    '_wlap2.jpg')));        
+    strcat(num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY), '_wlap.jpg')));        
 
  %% FIGURE 4: wlap
-fignum=34;
+fignum=44;
 figure(fignum)
 hold on;
 grid on;
@@ -442,12 +437,12 @@ title_text = sprintf('Corrected ap vs. Wavelength\n Cruise: %s Leg: %s \n%u-%s-%
 title(title_text, 'fontsize', 12);
 
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR_DAY), '_wlap_rottgers')));
+    strcat(num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY), '_wlap_rottgers')));
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR), '_',num2str(params.INGEST.YEAR_DAY), '_wlap_rottgers2.jpg')));     
+    strcat(num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY), '_wlap_rottgers.jpg')));     
 
 %% FIGURE 5: wlcp
-fignum=35;
+fignum=45;
 figure(fignum)
 hold on;
 grid on;
@@ -460,9 +455,9 @@ title_text = sprintf('Corrected cp vs. Wavelength\n Cruise: %s Leg: %s \n%u-%s-%
 title(title_text, 'fontsize', 12);  
 
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR_DAY), '_wlcp')));
+    strcat(num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY), '_wlcp')));
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR), '_',num2str(params.INGEST.YEAR_DAY), '_wlcp2.jpg'))); 
+    strcat(num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY), '_wlcp.jpg'))); 
     
 
 %% write params to .ini file

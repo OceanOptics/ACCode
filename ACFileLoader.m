@@ -128,6 +128,8 @@ classdef ACFileLoader
             nFiles = length(obj.FileNameList);
             obj.L.debug('ACFileLoader.loadData()', ...
                 sprintf('Number of files to iterate through: %u', nFiles));
+            
+            nFilesWithGoodData = 0;
 
             for iFiles = 1:nFiles;
                 
@@ -139,68 +141,79 @@ classdef ACFileLoader
                 % -------------------------------------------------------
                 % import .bin file with prepacs.exe
                 
-                dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' obj.OutputLocation]);
+                prepacs_output_filename = strcat(obj.OutputLocation, 'prepacs', num2str(iFiles), '.tmp');
+                
+%                 dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' obj.OutputLocation]);
+                dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
                 
                 % open the data file and retrieve data from it
                 fh = str2func(obj.ImportMethodName);
-                origDataMatrix = fh(obj.OutputLocation);
+%                 origDataMatrix = fh(obj.OutputLocation);
+                origDataMatrix = fh(prepacs_output_filename);
                 
                 % -------------------------------------------------------            
                 % Data Processing Section:
                 % Logic is here because this is the object that knows about
                 % the specific FILE types -- 
-%%
-                % get rid of any lines with a negative timestamp
-                index = origDataMatrix(:,1) >= 0;
-                dataMatrix = origDataMatrix(index, :);
-%%                
-                obj.L.debug('ACFileLoader.loadData()', ...
-                    sprintf('# lines with ts less than 0: %u', size(origDataMatrix) - size(dataMatrix)));
                 
-                timestampsMS = dataMatrix(:,1);
-                
-                obj.L.debug('ACFileLoader.loadData()', ...
-                    sprintf('timestampsMS start %s', datestr(timestampsMS(1), 'HH:MM:SS:FFF')));
-                
-                obj.L.debug('ACFileLoader.loadData()', ...
-                    sprintf('timestampsMS end %s', datestr(timestampsMS(end), 'HH:MM:SS:FFF')));
-         
-                %% why is this hardcoded??
-%                 disp('dataMatrix size:')
-%                 size(dataMatrix)
-                endCat = obj.numWL+1;
-                cRawDataMatrix = dataMatrix(:,2:endCat);
-%                 size(cRawDataMatrix)
-                startAat = endCat+1;
-                endAat = startAat + (obj.numWL - 1);
-                aRawDataMatrix = dataMatrix(:,startAat:endAat);
-%                 dataMatrix(:,endAat+1:end)
-%                 size(aRawDataMatrix)
-                
-                % create the correct timestamp array, using the dates from the file name
-                % (date not stored in timestamp)
-                % and adding the timestamps from the acdata file
-                [~, name, ext] = fileparts(fileName);
-                shortfilename = strcat(name, ext);
-                variablesFromFileName = textscan(shortfilename, 'acs%03s_%14s.bin');
-                dateFromFileName = variablesFromFileName{1,2};
-                fileDate = datenum(dateFromFileName, 'yyyymmddHHMMSS');
-                
-                timestamps = fileDate + datenum(0,0,0,0,0, (timestampsMS - timestampsMS(1))/1000);
+%                 if length(origDataMatrix) > 0
+                if ~isempty(origDataMatrix)
+                    
+                    % increase iterator
+                    nFilesWithGoodData = nFilesWithGoodData + 1;
+                    
+                    % get rid of any lines with a negative timestamp
+                    index = origDataMatrix(:,1) >= 0;
+                    dataMatrix = origDataMatrix(index, :);
+   
+                    obj.L.debug('ACFileLoader.loadData()', ...
+                        sprintf('# lines with ts less than 0: %u', size(origDataMatrix) - size(dataMatrix)));
 
-                temp(iFiles).timestamps = timestamps;
-                temp(iFiles).fileName = fileName;
-                temp(iFiles).cRawDataMatrix = cRawDataMatrix;
-                temp(iFiles).aRawDataMatrix = aRawDataMatrix;
-            end;  % end going through list of files and loading
+                    timestampsMS = dataMatrix(:,1);
+
+                    obj.L.debug('ACFileLoader.loadData()', ...
+                        sprintf('timestampsMS start %s', datestr(timestampsMS(1), 'HH:MM:SS:FFF')));
+
+                    obj.L.debug('ACFileLoader.loadData()', ...
+                        sprintf('timestampsMS end %s', datestr(timestampsMS(end), 'HH:MM:SS:FFF')));
+
+                    endCat = obj.numWL+1;
+                    cRawDataMatrix = dataMatrix(:,2:endCat);
+                    startAat = endCat+1;
+                    endAat = startAat + (obj.numWL - 1);
+                    aRawDataMatrix = dataMatrix(:,startAat:endAat);
+
+                    % create the correct timestamp array, using the dates from the file name
+                    % (date not stored in timestamp)
+                    % and adding the timestamps from the acdata file
+                    [~, name, ext] = fileparts(fileName);
+                    shortfilename = strcat(name, ext);
+                    variablesFromFileName = textscan(shortfilename, 'acs%03s_%14s.bin');
+                    dateFromFileName = variablesFromFileName{1,2};
+                    fileDate = datenum(dateFromFileName, 'yyyymmddHHMMSS');
+
+                    timestamps = fileDate + datenum(0,0,0,0,0, (timestampsMS - timestampsMS(1))/1000);
+
+                    temp(nFilesWithGoodData).timestamps = timestamps;
+                    temp(nFilesWithGoodData).fileName = fileName;
+                    temp(nFilesWithGoodData).cRawDataMatrix = cRawDataMatrix;
+                    temp(nFilesWithGoodData).aRawDataMatrix = aRawDataMatrix;
+                else
+                    % don't increase iterator, not good file
+                    
+                    obj.L.debug('ACFileLoader.loadData()', ...
+                        sprintf('No data: %u', nFiles));
+                end;
+                
+            end;  % for iFiles = 1:nFiles -- end going through list of files and loading
 
             % ------------------------------------------------------------
-            nFiles = length(temp);
+            nGoodFiles = length(temp);
             
             obj.L.debug('ACFileLoader.loadData()', ...
-                sprintf('checking timestamps.  Number of files to iterate through: %u', nFiles));
+                sprintf('checking timestamps.  Number of files to iterate through: %u', nGoodFiles));
 
-            for iFiles = 1:nFiles
+            for iFiles = 1:nGoodFiles
                 
                 obj.L.info('ACFileLoader.loadData()', ...
                     sprintf('iteration %u: filename: %s', iFiles, temp(iFiles).fileName));
@@ -214,7 +227,7 @@ classdef ACFileLoader
                 
                 
                 % if not last file
-                if iFiles ~= nFiles
+                if iFiles ~= nGoodFiles
                     %if the difference between the first timestamp of the
                     %next file and the last timestamp of this file is more
                     %than 2 hours, don't append (assume next day file?)

@@ -78,24 +78,17 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
         % determine number of wavelengths (number of columns)
         [nSpect, nWavelengths] = size(ap_uncorr);
 
-%         disp('size ap_uncorr')
-%         nSpect
-%         nWavelengths
         % check data is size we expect;
         if size(ap_uncorr)~=size(cp)
             L.error('ResidTempScatCorr', 'ap,cp size mismatch');
         else
-            L.info('ResidTempScatCorr','ap,cp size OK');
+            L.debug('ResidTempScatCorr','ap,cp size OK');
         end
         if length(wavelengths)~=nWavelengths
             L.error('ResidTempScatCorr', 'Invalid lambda');
         else
-            L.info('ResidTempScatCorr','size wavlengths OK');
+            L.debug('ResidTempScatCorr','size wavelengths OK');
         end
-
-        % MOVE THIS TO OUTSIDE FUNCTION, IF WE ARE DOING MORE THAN ONE CORRECTION
-        % CHOICE?
-%         psiT = getPsiT('Sullivan_etal_2006_instrumentspecific.xls', wavelengths)
 
         % unchanged from WS/TL code:
         opts = optimset('fminsearch');      
@@ -120,8 +113,7 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
             
             if all(isfinite(ap_uncorr(k,:)))
                 
-%                 disp('data for k------------------------------------------------')
-%                 disp(k)    
+  
                 % guess for paramters (beamc at lambda0, beamc slope)
                 delT = 0;
                 
@@ -140,14 +132,8 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                     % minimization routine
                     [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
 
-%                     size(deltaT(k))
-%                     size(fiterr(k))
-                    
                     % equation 5 from Slade paper
                     % combines temperature and scattering correction    
-%                     size(ap_uncorr(k,:))
-%                     size(psiT.*deltaT(k))
-%                     size( ((ap_uncorr(k,ref)-psiT(ref).*deltaT(k))./bp(ref)).*bp)
                     ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - psiT.*deltaT(k) - ...
                             ((ap_uncorr(k,ref)-psiT(ref).*deltaT(k))./bp(ref)).*bp;
 
@@ -175,12 +161,14 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
 %                         disp('psiT ok')
                     end;
                     if all(isnan(cp(k,:)))
-                        L.error('ResidTempScatCorr','in Rottgers - cp(k) is nan');
+                        L.error('ResidTempScatCorr',...
+                            sprintf('in Rottgers - cp(%u) is nan', k));
                     else
 %                         disp('cp ok')
                     end;
                     if all(isnan(ap_uncorr(k,:)))
-                        L.error('ResidTempScatCorr','in Rottgers - ap_uncorr(k,:) is nan');
+                        L.error('ResidTempScatCorr',...
+                            sprintf('in Rottgers - ap_uncorr(%u,:) is nan', k));
                     else 
 %                         disp('apuncorr ok')
                     end;
@@ -195,37 +183,13 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                     ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - (ap_uncorr(k,ref) - a715).* ...
                         ( (ec^-1*cp(k,:) - ap_uncorr(k,:) ) ./ (ec^-1*cp(k,ref) - a715))...
                         - psiT.*deltaT(k);
-                    % test one case
-%                     if k == 923
-%                         disp('a715')
-%                         a715
-%                         disp('ec')
-%                         ec
-%                         disp('ap_TSalScatCorr(k,:)')
-%                         ap_TSalScatCorr(k,:)
-%                         disp('ap_uncorr(k)')
-%                         ap_uncorr(k,:)
-%                         disp('(ap_uncorr(k,ref) - a715)')
-%                         (ap_uncorr(k,ref) - a715)
-%                         disp('(ec^-1*cp(k,:) - ap_uncorr(k,:)')
-%                         (ec^-1*cp(k,:) - ap_uncorr(k,:))
-%                         disp('(ec^-1*cp(k,ref) - a715)')
-%                         (ec^-1*cp(k,ref) - a715)
-%                         disp('psiT.*deltaT(k);')
-%                         psiT.*deltaT(k)
-%                     end;
+
 
                 elseif FLAT
                     L.debug('ResidTempScatCorr', 'FLAT');
 
-%                     x1 = fminsearch(@f_TS_Flat, [0,0], opts, ap_uncorr(k,:), psiT, NIR);
+                    [x1, fiterr(k)] = fminsearch(@f_TS_Flat, [0,0], opts, ap_uncorr(k,:), psiT, NIR);
 
-                        [x1, fiterr(k)] = fminsearch(@f_TS_Flat, [0,0], opts, ap_uncorr(k,:), psiT, NIR);
-
-%                     disp('deltaT')
-%                     deltaT(k)
-%                     disp('fiterr')
-%                     fiterr(k)
                     deltaT(:,:) = x1(1);
                     A(:,:) = x1(2);
                     ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - A - psiT.*deltaT(k);
@@ -262,7 +226,7 @@ function costf = f_TS_Slade(delT, ap, cp, psiT, NIR, ref)
 
 return
 
-% not using right now?
+% not using right now according to EB
 %     function costf = f_TS_Rottgers(delT, ap, cp, psiT, NIR, ref)
 % 
 %         % 0.212*(ap(ref)^1.135)
@@ -277,7 +241,7 @@ function costf = f_TS_Flat( x0, ap, psiT, NIR )
     
     % x0(1) is delT
     % x0(2) is A
-    costf = sum( abs( ap(NIR) - x0(2) - psiT(NIR).*x0(1)))
+    costf = sum( abs( ap(NIR) - x0(2) - psiT(NIR).*x0(1)));
     
 return
     

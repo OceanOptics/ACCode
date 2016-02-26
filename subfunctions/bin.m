@@ -26,7 +26,7 @@ function  [bin_flags, binned_time, numberBins, binIndexNumbers, ...
             start_time_to_match = datenum(start_time_vec);
             
             % create a datevec of the last timestamp
-            time_to_match_vec(end,:)
+            time_to_match_vec(end,:);
             end_time_vec = time_to_match_vec(end,:);
             % set the seconds to zero (just have minutes)
             end_time_vec(6) = 0;

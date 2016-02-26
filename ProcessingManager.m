@@ -1,7 +1,7 @@
 %% ProcessingManager - SCRIPT which takes pre-processed data, saved as an 
 % ACPlusAncillaryData object called "allData" and does the main data
 % processing for a and c data, as well as binning temperature, salinity and
-% GPS data.
+% GPS data (for Latitude and Longitude).
 %
 % STEP 0:   Create ProcessedData Object
 % STEP 1A:  Process Filtered (FSW): (LEVEL L3 (BINNED) DATA)
@@ -9,12 +9,14 @@
 % STEP 2:   Get Filtered Spectra (INTERPOLATE): (LEVEL L4 (FILTERED) DATA)
 % STEP 3:   Calculate Particulate: (LEVEL L5: PARTICULATE)
 % STEP 4:   Compute new uncertainty for p
-% STEP 5:   Spectral unsmoothing: (LEVEL L6: UNSMOOTH)
-% STEP 6&7: Remove WL over 750 & interpolate a to c
-% STEP 8:   Correct mismatch in spectral band positions between a and c 
-% STEP 9:   Scattering/Residual Temperature Correction(s)
-% STEP 10:  Correct attenuation
-% STEP 11:  Calculate final uncertainty for ap
+% STEP 5&6: Remove WL over 750 & interpolate a to c (Level L6: BELOW750)
+% STEP 7:   Correct mismatch in spectral band positions between a and c 
+%                                                   (Level L7: MATCHEDWL)
+% STEP 8:   Scattering/Residual Temperature Correction(s) (LEVEL L8:
+% CORRECTED)
+% STEP 9:   Correct attenuation
+% STEP 10:  Calculate final uncertainty for ap
+% STEP 11:  Spectral unsmoothing: (LEVEL L9: UNSMOOTH)
 % STEP 12:  Bin TSG data
 %
 % Requires: the .mat file saved in PreProcessingManager, if not in memory
@@ -49,8 +51,8 @@ if params.RUN.LOAD_PREPROCESS_DATA_FROM_DISK
     matFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
         strcat('acsPREPROC', '_', num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY)));
     load(matFileName);
-    paramsFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, 'params');
-    load(paramsFileName);    
+%     paramsFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, 'params');
+%     load(paramsFileName);    
 end;
 
 % %%
@@ -153,9 +155,10 @@ pd.calcSuspectData();
 % PLOT
 % NEED NOTE HERE ABOUT WHAT IS BEING PLOTTED
 % THESE ARE DEBUG PLOTS
-pd.plotFSWSuspectData(1, 20);
-pd.plotTSWSuspectData(2, 20);
-
+if params.RUN.CREATE_DEBUG_PLOTS
+    pd.plotFSWSuspectData(31, 20);
+    pd.plotTSWSuspectData(32, 20);
+end;
 % ------------------------------------------------------------------------ 
 % STEP 2: Get Filtered Spectra (INTERPOLATE): CREATES LEVEL L4 (FILTERED)
 % DATA
@@ -174,7 +177,7 @@ pd.interpolateFiltered();
 
 %%  Plot Data
 %THIS IS DEBUG PLOT
-pd.plotACInterpolatedData(3, 20);
+pd.plotACInterpolatedData(33, 20);
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
     strcat(num2str(params.INGEST.YEAR_DAY), '_filt_spec_median')));
 
@@ -232,14 +235,14 @@ else
     L.info('ProcessingManager', 'adjusted gap between and c timestamps by 1');
 end;
 
-% plot particulate
-% THESE ARE DEBUG PLOTS
-pd.plotCpVsTime(4);
-pd.plotApVsTime(5);
+% plot particulate debug plots
+if params.RUN.CREATE_DEBUG_PLOTS
+    pd.plotCpVsTime(34);
+    pd.plotApVsTime(35);
+end;
 
 
-
-%% STEP 6&7: REMOVE WAVELENGTHS OVER 750 & INTERPOLATE A 750 wl of data
+%% STEP 5&6: REMOVE WAVELENGTHS OVER 750 & INTERPOLATE A 750 wl of data
 
 if pd.cExists == true
     pd.removeWLAfter750('c');
@@ -254,7 +257,7 @@ end;
 
 
 
-%% STEP 8: Correct mismatch in spectral band positions between a and c 
+%% STEP 7: Correct mismatch in spectral band positions between a and c 
 % Only can match the wavelengths, if we have both a and c data
 % a will be interpolated to c wavelengths
 
@@ -271,7 +274,7 @@ else
 end;
     
 
-%% Step 9: Scattering/Residual Temperature Correction
+%% Step 8: Scattering/Residual Temperature Correction
 
 if pd.cExists == true
     if pd.aExists == true
@@ -299,24 +302,26 @@ else
     end;
 end;    
         
-pd.plotApCorr(7, 'slade');
-pd.plotApCorr(107, 'rottgers');
+pd.plotApCorr(37, 'slade');
+pd.plotApCorr(38, 'rottgers');
 
-%% Step 10: CORRECT ATTENUATION
+%% Step 9: CORRECT ATTENUATION
 if pd.cExists == true
     if pd.aExists == true
         L.debug('ProcessingManager', 'cExists == true; aExists == true');
         pd.attenuationCorr('WITHA');
         
-        tsToUse = find( ~isnan(pd.var.cp.L8.data(:,1)), 1, 'first');
-        
-        figure(10)
-        hold on; 
-        grid on;
-        plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), '*b')
-        plot( pd.var.cp.L7.wavelengths, pd.var.cp.L7.data(tsToUse,:), '*c')
-        legend('corrected cp', 'uncorrected cp')
-        title('correcting c using a')
+        if params.RUN.CREATE_DEBUG_PLOTS
+            tsToUse = find( ~isnan(pd.var.cp.L8.data(:,1)), 1, 'first');
+
+            figure(39)
+            hold on; 
+            grid on;
+            plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), '*b')
+            plot( pd.var.cp.L7.wavelengths, pd.var.cp.L7.data(tsToUse,:), '*c')
+            legend('corrected cp', 'uncorrected cp')
+            title('correcting c using a')
+        end;
          
     else
         
@@ -326,29 +331,29 @@ if pd.cExists == true
         pd.attenuationCorr('WITHOUTA');
         
         tsToUse = find( ~isnan(pd.var.cp.L9.data(:,1)), 1, 'first');
-        
-        figure(10)
-        hold on; 
-        grid on;
-        plot( pd.var.cp.L9.wavelengths, pd.var.cp.L9.data(tsToUse,:), '*b')
-        plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), '*c')
-        legend('corrected cp', 'uncorrected cp')
-        title('correcting c without using a')
+        if params.RUN.CREATE_DEBUG_PLOTS
+            figure(39)
+            hold on; 
+            grid on;
+            plot( pd.var.cp.L9.wavelengths, pd.var.cp.L9.data(tsToUse,:), '*b')
+            plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), '*c')
+            legend('corrected cp', 'uncorrected cp')
+            title('correcting c without using a')
 
-        figure(11)
-        hold on; 
-        grid on;
-        plot( pd.var.cp.L9.wavelengths, pd.var.cp.L9.data(tsToUse,:), 'b')
-        plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), 'c')
-        legend('corrected cp', 'uncorrected cp')
-        title('correcting c without using a')
-        
+            figure(310)
+            hold on; 
+            grid on;
+            plot( pd.var.cp.L9.wavelengths, pd.var.cp.L9.data(tsToUse,:), 'b')
+            plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), 'c')
+            legend('corrected cp', 'uncorrected cp')
+            title('correcting c without using a')
+        end;
     end;
 else
     L.debug('ProcessingManager', 'no attenuation correction - no c data');
 end;
 % pd.attenuationCorr('WITHA');
-%%  STEP 11: CALCULATE FINAL UNCERTAINTY FOR ap
+%%  STEP 10: CALCULATE FINAL UNCERTAINTY FOR ap
 
 % for ap:
 % uncertainty in processing
@@ -356,16 +361,20 @@ end;
 pd.computeAPUncertaintyBetweenCorrections();
 
 %% ------------------------------------------------------------------------
-% STEP 5: SPECTRAL UNSMOOTHING: CREATES LEVEL L6: UNSMOOTH
+% STEP 11: SPECTRAL UNSMOOTHING: CREATES LEVEL L6: UNSMOOTH
 %
 
 if params.PROCESS.UNSMOOTH_DATA
     pd.unsmooth();
+    
+    if params.RUN.CREATE_DEBUG_PLOTS
 
-    % DEBUG PLOT TO CHECK
-    atsToUse = find( ~isnan(pd.var.ap.L8.data_slade(:,1)), 1, 'first');
-    ctsToUse = find( ~isnan(pd.var.cp.L9.data(:,1)), 1, 'first');
-    pd.plotUnsmoothVsSmooth(6, atsToUse, ctsToUse);
+        % DEBUG PLOT TO CHECK
+        atsToUse = find( ~isnan(pd.var.ap.L8.data_slade(:,1)), 1, 'first');
+        ctsToUse = find( ~isnan(pd.var.cp.L9.data(:,1)), 1, 'first');
+        pd.plotUnsmoothVsSmooth(311, atsToUse, ctsToUse);
+        
+    end;
 else
     L.info('ProcessingManager', 'Not doing unsmoothing');
 end;
@@ -394,7 +403,7 @@ allData.GPSData.bin(acTime, params.PROCESS);
 %% put all on one big plot
 % THIS IS A GOOD INTERMEDIATE PLOT TO OUTPUT AND SAVE
 % Temperature Data
-figure(100)
+figure(312)
 ax1 = subplot(2,2,1);
 grid on;
 hold on;

@@ -196,6 +196,7 @@ fileID = fopen(filename,'r');
 
 if fileID == -1
     disp('file not opened successfully')
+    prepacs =[]
 else
     disp('importfileACS file opened successfully')
     %% Read columns of data according to format string.
@@ -215,6 +216,7 @@ else
 
     %% Close the text file.
     fclose(fileID);
+    prepacs = [dataArray{1:end-1}];
 end
 
 %% Post processing for unimportable data.
@@ -224,6 +226,7 @@ end
 % script.
 
 %% Create output variable
-prepacs = [dataArray{1:end-1}];
+% size(dataArray)
+
 % disp('prepacs 2,1')
 % prepacs(2,1)

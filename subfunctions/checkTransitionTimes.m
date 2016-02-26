@@ -160,7 +160,7 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
        goodEnds = zeros(maxLength, 1);
        goodEnds(:,:) = NaN; 
        goodEndFlags = goodEnds;
-       disp('***********************************************')
+%        disp('***********************************************')
        tempEndFlags = zeros(length(goodEndFlags),1);
        tempEndFlags(:,:) = NaN;
        tempEndFlags = endFlags;
@@ -261,19 +261,19 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
 
               % if it's the last one, copy in last ts as end
               if (iTempStart == numTempStarts)
-                  datestr(tempStarts(iTempStart))
+%                   datestr(tempStarts(iTempStart))
                   
                   % <------- COPY IN DATA 2/3 -------------------------->
                   goodStarts(iGoodStart) = tempStarts(iTempStart);
                   goodStartFlags(iGoodStart) = tempStartFlags(iTempStart);
 
-                  datestr(goodStarts(iGoodStart))
-                  
-                  datestr(timestamps(end))
+%                   datestr(goodStarts(iGoodStart))
+%                
+%                   datestr(timestamps(end))
                   goodEnds(iGoodEnd) = timestamps(end);
                   % 11/17 -- here the last timestamp shoudl be one because
                   % we made it up?
-                  datestr(goodEnds(iGoodEnd))
+%                   datestr(goodEnds(iGoodEnd))
                   goodEndFlags(iGoodEnd) = 1;   % interpolated?
 
                    L.debug('checkTransitionTimes', ...
@@ -319,12 +319,12 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
                % use the first one
                % <------- COPY IN DATA 3/3 -------------------------->
                % first, copy in start time
-               datestr(tempStarts(iTempStart))
+%                datestr(tempStarts(iTempStart))
                goodStarts(iGoodStart) = tempStarts(iTempStart);
                goodStartFlags(iGoodStart) = tempStartFlags(iTempStart);
 
                useThisOneIndex = find(possibleEndsIndex == 1, 1, 'first'); 
-               datestr(rawEndTimes(useThisOneIndex))
+%                datestr(rawEndTimes(useThisOneIndex))
 
                goodEnds(iGoodEnd) = rawEndTimes(useThisOneIndex);
                goodEndFlags(iGoodEnd) = tempEndFlags(useThisOneIndex);

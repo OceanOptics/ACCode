@@ -90,18 +90,18 @@ classdef FlowData < AncillaryData
                     else
                         obj.TransStartFlag(1) = 1; % good
                     end
-                    sprintf('first: %u', obj.TransStartFlag(1))
+%                     sprintf('first: %u', obj.TransStartFlag(1))
                     % if there are more than 2
                     if length(obj.TransStartTime) >= 2
                         % for everyone after first one except last one
                         for i=2:(length(obj.TransStartTime) - 1)
-                            sprintf('i: %u, start time: %s', i, datestr(obj.TransStartTime(i)))
+%                             sprintf('i: %u, start time: %s', i, datestr(obj.TransStartTime(i)))
                             % find the difference between this one and the previous
                             % one
                             timediffprev = obj.TransStartTime(i) - obj.TransStartTime(i-1);
                             timediffnext = obj.TransStartTime(i+1) - obj.TransStartTime(i);
-                            sprintf('timediffprev: %s', datestr(timediffprev))
-                            sprintf('timediffnext: %s', datestr(timediffnext))
+%                             sprintf('timediffprev: %s', datestr(timediffprev))
+%                             sprintf('timediffnext: %s', datestr(timediffnext))
 
                             if (timediffprev < uppermargin) && (timediffprev > lowermargin ) || ...
                                 (timediffnext < uppermargin && timediffnext > lowermargin )
@@ -109,8 +109,8 @@ classdef FlowData < AncillaryData
                             else
                                 obj.TransStartFlag(i) = 3; %suspect
                             end
-                            sprintf('flag: %u',  obj.TransStartFlag(i))
-                            sprintf('----------------------------------')
+%                             sprintf('flag: %u',  obj.TransStartFlag(i))
+%                             sprintf('----------------------------------')
                         end  % end for loop
                     end  % end if more than 2
                    %check last one
@@ -120,15 +120,15 @@ classdef FlowData < AncillaryData
                     else
                         obj.TransStartFlag(end) = 1; % good
                    end
-                   sprintf('last: %u', obj.TransStartFlag(end))
+%                    sprintf('last: %u', obj.TransStartFlag(end))
 
                    %% check transitions are length we expect
                    if obj.TransStartTime(1) < obj.TransEndTime(1)
-                       disp('data starts in TSW, not FSW')
+%                        disp('data starts in TSW, not FSW')
 
                         if length(obj.TransStartTime) == length(obj.TransEndTime)
                        %     disp('% we have complete set of transitions(?)')
-                            obj.FSWPeriodLengths = (obj.TransEndTime - obj.TransStartTime)
+                            obj.FSWPeriodLengths = (obj.TransEndTime - obj.TransStartTime);
                         elseif length(obj.TransStartTime) > length(obj.TransEndTime)
                         %    disp('we have an extra start time, i.e. data ends during')
                             % FSW
@@ -153,19 +153,19 @@ classdef FlowData < AncillaryData
                      FSWuppermargin = datenum(0,0,0,0, obj.FSWDuration + .2*obj.FSWDuration, 0);
                      FSWlowermargin = datenum(0,0,0,0, obj.FSWDuration - .2*obj.FSWDuration, 0);
                      % check each duration is within margin
-                     sprintf('lower limit %s', datestr(FSWuppermargin))
-                     sprintf('upper limit %s', datestr(FSWlowermargin))
+%                      sprintf('lower limit %s', datestr(FSWuppermargin))
+%                      sprintf('upper limit %s', datestr(FSWlowermargin))
                    for i=1:length(obj.FSWPeriodLengths)
                        % if length of FSW is smaller than supposed duration -
                        % margin OR greater than supposed duration + margin
-                       sprintf('period length: %s', datestr(obj.FSWPeriodLengths(i)))
+%                        sprintf('period length: %s', datestr(obj.FSWPeriodLengths(i)))
                        if (obj.FSWPeriodLengths(i) < (FSWlowermargin) || ...
                                (obj.FSWPeriodLengths(i) > (FSWuppermargin)))
                            obj.TransStartFlag(i) = 3;
                        end
                    end
             elseif length(obj.TransStartTime) == 1 % length(obj.TransStartTime) > 1
-                disp('only have one transitions times');
+%                 disp('only have one transitions times');
                 obj.TransStartFlag(1) = 1;
             else
                 L.error('FlowData', 'NO flow transitions times');
@@ -267,8 +267,8 @@ classdef FlowData < AncillaryData
 
             diffArray =  idxFiltered(2:end) - idxFiltered(1:end-1);
             diffArray(end+1) = NaN;
-            startsIndex = find(diffArray > 0)
-            endsIndex = find(diffArray < 0)
+            startsIndex = find(diffArray > 0);
+            endsIndex = find(diffArray < 0);
 
             meanVecLength = length(obj.runningTSWmedian);
             startsLength = length(startsIndex);

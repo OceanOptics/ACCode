@@ -4,8 +4,6 @@ function [runningFSWmedian, runningTSWmedian] = findFSWTSWRunMeds( dataIn, timeI
     timespan = timespanIn; %19200 %80 minutes 2400 %timespanIn; %2400;(2400 readings == 10 min
     samplingFreq = samplingFreqIn; %4: 4*60 = 240  FOR MINUTE?
 
-    disp('starting first pass')
-  
     [runningMinForw, runningMedForw] = calc1(dataIn, timespan);   
     
     manualAdjustmentMins = timespan/samplingFreq; 
@@ -27,9 +25,22 @@ function [runningFSWmedian, runningTSWmedian] = findFSWTSWRunMeds( dataIn, timeI
     runningThreshold(:,:) = nanmean(runningThresholdTmp(1:manualAdjustmentSecs));
     runningThreshold(manualAdjustmentSecs+1:end) = runningThresholdTmp(1:end-manualAdjustmentSecs);
     
-    disp('starting second pass')
-    [runningFSWmedian, runningTSWmedian] = calc2(dataIn, runningThreshold, timespan);
+%     [runningFSWmedian, runningTSWmedian] = calc2(dataIn, runningThreshold, timespan);
     
+index = dataIn < runningThreshold;
+
+tswdat = nan(size(dataIn));
+
+fswdat = nan(size(dataIn));
+
+tswdat(index) = medfilt1(dataIn(index),19201);
+
+fswdat(~index) = medfilt1(dataIn(~index),19201);
+
+runningFSWmedian = tswdat;
+runningTSWmedian = fswdat;
+
+
 %     figure(101)
 %     hold on
 %     grid on

@@ -70,10 +70,10 @@ flowFiles = getFilesNextPrev(params.INGEST.FLOW_DIRECTORY, flowcurr, flownext, f
 if size(flowFiles) >= 1
     ffl = FlowFileLoader(flowFiles, params.INGEST.FLOW_IMPORT_METHOD_NAME, 'flow', params.INGEST.FLOW_UNITS, 'valve', params.INGEST.VALVE_UNITS );
     flowData = ffl.loadData();
-    params.INGEST.FLOW_EXISTS = true;
+%     params.INGEST.FLOW_EXISTS = true;
 else
     % no flow files!
-    params.INGEST.FLOW_EXISTS = false;
+%     params.INGEST.FLOW_EXISTS = false;
 end;
 
 %%
@@ -101,8 +101,8 @@ accurr = sprintf(params.INGEST.AC_FILE_FORMAT, params.INGEST.AC_SERIAL_NUMBER, p
 acnext = sprintf(params.INGEST.AC_FILE_FORMAT, params.INGEST.AC_SERIAL_NUMBER, params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY+1);
 acprev = sprintf(params.INGEST.AC_FILE_FORMAT, params.INGEST.AC_SERIAL_NUMBER, params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY-1);
 acFiles = getFilesNextPrev(params.INGEST.AC_DIRECTORY, accurr, acnext, acprev);
-prepacsOut = fullfile(params.INGEST.PREPACS_OUTPUT_DIRECTORY, params.INGEST.PREPACS_OUTPUT_FILE);
-
+% prepacsOut = fullfile(params.INGEST.PREPACS_OUTPUT_DIRECTORY, params.INGEST.PREPACS_OUTPUT_FILE);
+prepacsOut = fullfile(params.INGEST.PREPACS_OUTPUT_DIRECTORY);
 %%
 % load data from AC files
 
@@ -187,22 +187,26 @@ dynamicDateTicks;
 xlabel('Time');
 ylabel('a Data');
 legend('a Data');
-
-ax2 = subplot(3,1,2);
-dynamicDateTicks;
-plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
-xlabel('Time');
-ylabel('Valve Data');
-legend('Valve Data');
-
+if params.INGEST.FLOW_EXISTS
+    ax2 = subplot(3,1,2);
+    dynamicDateTicks;
+    plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
+    xlabel('Time');
+    ylabel('Valve Data');
+    legend('Valve Data');
+end;
 ax3 = subplot(3,1,3);
 dynamicDateTicks;
 scatter(allData.TemperatureData.DataObject.Time, allData.TemperatureData.DataObject.Data(:,1));
 xlabel('Time');
 ylabel('Temperature Data');
 legend('Temperature Data');
+if params.INGEST.FLOW_EXISTS
 
-linkaxes([ax1, ax2, ax3], 'x');
+    linkaxes([ax1, ax2, ax3], 'x');
+else
+        linkaxes([ax1, ax3], 'x');
+end
 
 %% close variables
 
