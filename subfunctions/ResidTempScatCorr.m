@@ -127,7 +127,7 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                 if SLADE
                     
                     ref = find( wavelengths >= 730, 1, 'first');
-                        
+                      
                     % equation 6 from Slade paper
                     % minimization routine
                     [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
@@ -142,6 +142,7 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                     % spectra.  Dont' use for Rottgers
                     ap_uncorr_ref(k,1) = ap_TSalScatCorr(k,ref) + (ap_uncorr(k,ref)-psiT(ref).*deltaT(k));
                     
+                
                 elseif ROTTGERS
                     
                     ref = find( wavelengths >= 715, 1, 'first');
@@ -174,10 +175,19 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                     end;
                     %EB changed to Slade:
                     %[deltaT(k), fiterr(k)] = fminsearch(@f_TS_Rottgers, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);    
-                    [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
+
+                    % old 2/28
+                    %                     [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
                     
 %                     a715 = 0.212*(ap_uncorr(ref)^1.135);
-                    a715 = 0.212*(ap_uncorr(k,ref)^1.135);
+% old 2/28
+%                     a715 = 0.212*(ap_uncorr(k,ref)^1.135);
+                    
+                    [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, ...
+                        opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
+
+                    a715 = 0.212*((ap_uncorr(k,ref)-psiT*deltaT(k)).^1.135);
+                    
                     ec = 0.56;
                     
                     ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - (ap_uncorr(k,ref) - a715).* ...
@@ -194,6 +204,7 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                     A(:,:) = x1(2);
                     ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - A - psiT.*deltaT(k);
                     
+                   
                 else
                         L.error('ResidTempScatCorr', 'Need to run correction');
                 end;

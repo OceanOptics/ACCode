@@ -79,14 +79,17 @@ for iYEAR_DAY = 1:length(daysToRun)
     params.INGEST.AC_ONLY_OUTPUT_FILE = strcat('acONLY', num2str(params.INGEST.YEAR), ...
         '_', num2str(params.INGEST.YEAR_DAY));
 
-%     params.INGEST.PREPACS_OUTPUT_DIRECTORY = 'C:\Users\Wendy\Documents\data\Tara\TaraMedTest\TEMP';
-params.INGEST.PREPACS_OUTPUT_DIRECTORY = strcat(params.INGEST.DATA_OUTPUT_MAIN_DIRECTORY, ...
+    params.INGEST.PREPACS_OUTPUT_DIRECTORY = strcat(params.INGEST.DATA_OUTPUT_MAIN_DIRECTORY, ...
         num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY));
 
     % A saved 'raw' data file of ac data, plus ancillary data, for the given
     % yearday
     params.INGEST.DATA_OUTPUT_DIRECTORY = strcat(params.INGEST.DATA_OUTPUT_MAIN_DIRECTORY, ...
         num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY));
+    
+    % Inputting data from a potentially different directory
+%     params.INGEST.DATA_INPUT_DIRECTORY = strcat(params.INGEST.DATA_INPUT_MAIN_DIRECTORY, ...
+%         num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY));
 
     %%
     % create log file
@@ -133,8 +136,8 @@ params.INGEST.PREPACS_OUTPUT_DIRECTORY = strcat(params.INGEST.DATA_OUTPUT_MAIN_D
     end;
     if params.RUN.OUTPUT
         disp('------------- Running OutputManager -------------');
+
         run('OutputManager.m');
-%         run('OutputManagerTaraMedHack.m');
     else
         disp('Not running OutputManager');
     end;

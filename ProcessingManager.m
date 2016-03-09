@@ -178,6 +178,10 @@ pd.interpolateFiltered();
 %%  Plot Data
 %THIS IS DEBUG PLOT
 pd.plotACInterpolatedData(33, 20);
+if ~exist(params.INGEST.DATA_OUTPUT_DIRECTORY, 'dir')
+    mkdir(params.INGEST.DATA_OUTPUT_DIRECTORY)
+    L.info('ProcessingManager','made new directory for output');
+end;
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
     strcat(num2str(params.INGEST.YEAR_DAY), '_filt_spec_median')));
 
@@ -206,6 +210,7 @@ if ap_size(1) ~= cp_size(1)
                 pd.var.cp.L5.timestamps(end,:) = [];
                 pd.var.cp.L5.data(end,:) = [];
                 pd.var.cp.L5.uncertainty(end,:) = [];
+                pd.var.cp.L5.std(end,:) = [];
             else
                 L.error('ProcessingManager','gap between a tiimestamps and c timestamps is larger than 1');
             end;
@@ -215,6 +220,7 @@ if ap_size(1) ~= cp_size(1)
             if sum(datevec(pd.var.ap.L5.timestamps(end-1)) == datevec(pd.var.cp.L5.timestamps(end))) == 6
                 pd.var.ap.L5.timestamps(end) = [];
                 pd.var.ap.L5.data(end) = [];
+                pd.var.ap.L5.uncertainty(end) = [];
                 pd.var.ap.L5.uncertainty(end) = [];
             else
                 L.error('ProcessingManager','gap between a tiimestamps and c timestamps is larger than 1');

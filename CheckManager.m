@@ -24,7 +24,7 @@
 %----------------------------- BEGIN CODE ---------------------------------
 %%Load data file from disk
 
-if params.RUN.LOAD_OUTPUT_DATA_FROM_DISK
+if params.RUN.LOAD_CHECK_DATA_FROM_DISK
 
     matFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
         strcat('acsPROC', '_', num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY)));
@@ -38,11 +38,12 @@ end;
 
 %get wavelengths
 wavelengths = pd.var.ap.L8.wavelengths_slade;
-sb_fname_ascii = ['Tara_ACS_apcp' num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY)];
+sb_fname_ascii = ['Tara_ACS_apcp' num2str(params.INGEST.YEAR) '_' ...
+    num2str(params.INGEST.YEAR_DAY)];
 
-dataFiles = {'ap_slade', 'ap_rottgers', 'cp'}; 
-fileText = {'ap - corrected using Slade', 'ap - corrected using Rottgers', 'cp'};
-wlPrefix = {'ap', 'ap', 'cp'};               
+dataFiles = {'ap', 'cp'}; 
+fileText = {'ap - corrected using Slade', 'cp'};
+wlPrefix = {'ap', 'cp'};               
 
 %%
 for iData = 1:length(dataFiles)
@@ -51,7 +52,8 @@ for iData = 1:length(dataFiles)
     thisPrefix = wlPrefix{iData}; %;
     
     extension = strcat(thisFileName, '.txt');
-    seabassFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(sb_fname_ascii, extension));
+    seabassFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+        strcat(sb_fname_ascii, extension));
 
     datamatrix = importSeaBASS2(seabassFileName);
 
@@ -93,5 +95,5 @@ for iData = 1:length(dataFiles)
 end;
 
 if params.INGEST.CLEAR_VARS
-    clear pd;
+%     clear pd;
 end;

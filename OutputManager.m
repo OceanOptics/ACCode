@@ -17,7 +17,7 @@
 % MISCLab, University of Maine
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
-% May 2015; Last revision: 16-Feb-16
+% May 2015; Last revision: 4-Mar-16
 % 
 
 %----------------------------- BEGIN CODE ---------------------------------
@@ -54,17 +54,17 @@ cp_timestamps = pd.getVar('name', 'cp', 'data', 'timestamps');
 
 % get ap - for each correction - more than one correction is possible
 if params.PROCESS.SCATTERING_CORR_SLADE
-    ap_data_slade = pd.getVar('name', 'ap', 'data', 'data_slade', 'level', 'corrected');
+    ap_data_slade = pd.getVar('name', 'ap', 'data', 'data_slade'); %, 'level', 'corrected');
 end;
 if params.PROCESS.SCATTERING_CORR_ROTTGERS
-    ap_data_rottgers = pd.getVar('name', 'ap', 'data', 'data_rottgers', 'level', 'corrected');
+    ap_data_rottgers = pd.getVar('name', 'ap', 'data', 'data_rottgers'); %, 'level', 'corrected');
 end;
 if params.PROCESS.SCATTERING_CORR_FLAT
-    ap_data_flat = pd.getVar('name', 'ap', 'data', 'data_flat', 'level', 'corrected');
+    ap_data_flat = pd.getVar('name', 'ap', 'data', 'data_flat'); %, 'level', 'corrected');
 end;
 
 % get cp
-cp_data = pd.getVar('name', 'cp', 'data', 'data', 'level', 'corrected');
+cp_data = pd.getVar('name', 'cp', 'data', 'data'); %, 'level', 'corrected');
 
 % get ap uncertainty
 % there can be more than one correction calculated - but we can only report
@@ -77,6 +77,11 @@ end;
     
 % get cp uncertainty
 cp_uncertainty = pd.getVar('name', 'cp', 'data', 'uncertainty');
+
+% added 3/3
+% get std
+cp_std_to_print = pd.getVar('name', 'cp', 'data', 'std');
+ap_std_to_print = pd.getVar('name', 'ap', 'data', 'std');
 
 % GET ANCILLARY DATA: Temperature, Salinity, GPS
 temp_data = allData.TemperatureData.var.L3.BinnedLabTempData;
@@ -128,6 +133,7 @@ L.info('OutputManager', sprintf('Replaced %u values in cp_data with -9999', tota
 
 cp_data(replaceWith999Index) = -9999;
 cp_uncertainty(replaceWith999Index) = -9999;
+cp_std_to_print(replaceWith999Index) = -9999;
 
 if params.PROCESS.SCATTERING_CORR_SLADE
     replaceWith999Index = ap_data_slade < -0.005;
@@ -135,7 +141,6 @@ if params.PROCESS.SCATTERING_CORR_SLADE
     totalNumReplaced = sum(numReplaced);
     L.info('OutputManager', sprintf('Replaced %u values in ap_data_slade with -9999', totalNumReplaced));
     ap_data_slade(replaceWith999Index) = -9999;
-    ap_uncertainty(replaceWith999Index) = -9999;
 end
 
 if params.PROCESS.SCATTERING_CORR_ROTTGERS
@@ -144,7 +149,6 @@ if params.PROCESS.SCATTERING_CORR_ROTTGERS
     totalNumReplaced = sum(numReplaced);
     L.info('OutputManager', sprintf('Replaced %u values in ap_data_rottgers with -9999', totalNumReplaced));
     ap_data_rottgers(replaceWith999Index) = -9999;
-    ap_uncertainty(replaceWith999Index) = -9999;
 end
 
 if params.PROCESS.SCATTERING_CORR_FLAT
@@ -153,9 +157,10 @@ if params.PROCESS.SCATTERING_CORR_FLAT
     totalNumReplaced = sum(numReplaced);
     L.info('OutputManager', sprintf('Replaced %u values in ap_data_flat with -9999', totalNumReplaced));    
     ap_data_flat(replaceWith999Index) = -9999;
-    ap_uncertainty(replaceWith999Index) = -9999;
 end
-
+ap_uncertainty(replaceWith999Index) = -9999;
+ap_std_to_print(replaceWith999Index) = -9999;
+    
 % bin_tempc(isnan(bin_tempc)) = -9999;
 replaceWith999Index = isnan(temp_data);
 numReplaced = sum(replaceWith999Index);
@@ -177,17 +182,13 @@ temp_time = datestr(datenum(timestamps),'HH:MM:SS');
 timestamps_date_to_print = cellstr(temp_date(goodrows,:));
 timestamps_time_to_print = cellstr(temp_time(goodrows,:));
 
-% same for all files for this yearday
-start_date = datestr(datenum(timestamps(1, 1)),'yyyymmdd');
-end_date = datestr(datenum(timestamps(end, 1)),'yyyymmdd');
-start_time = datestr(datenum(timestamps(1, 1)),'HH:MM:SS');
-end_time = datestr(datenum(timestamps(end, 1)),'HH:MM:SS');
+% same for all files for this yearday - NEEDS TO BE DONE AFTER BADROWS
+% FILTERED OUT
+start_date = timestamps_date_to_print{1,1};
+end_date = timestamps_date_to_print{end,1};
+start_time = timestamps_time_to_print{1,1};
+end_time = timestamps_time_to_print{end,1};
 
-% same for all files for this yearday
-northLat = max(lat_data);
-southLat = min(lat_data);
-eastLon = max(lon_data);
-westLon = min(lon_data);
 
 % ----------------------------------------------------------------------
 % PART 2: PRODUCE HEADER
@@ -195,27 +196,53 @@ westLon = min(lon_data);
 % ----------------------------------------------------------------------
 % Step 1: Set up variables
 % ----------------------------------------------------------------------
-sb_fname_xls = [params.OUTPUT.SEABASS_FILE_PREFIX num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY) '.xls'];
-sb_fname_ascii = [params.OUTPUT.SEABASS_FILE_PREFIX num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY)];
+sb_fname_xls = [params.OUTPUT.SEABASS_FILE_PREFIX ...
+    num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY) '.xls'];
+sb_fname_ascii = [params.OUTPUT.SEABASS_FILE_PREFIX ...
+    num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY)];
 cruise = strrep(params.INGEST.CRUISE_LEG, ' ', '');
 
-data = {ap_data_slade, ap_data_rottgers, cp_data, ap_uncertainty, cp_uncertainty};
-dataFiles = {'ap_slade', 'ap_rottgers', 'cp', 'ap_uncertainty', 'cp_uncertainty'};
-wlPrefix = {'ap', 'ap', 'cp', 'ap', 'cp'};
+% data = {ap_data_slade, ap_data_rottgers, cp_data, ap_uncertainty, cp_uncertainty};
+% dataFiles = {'ap_slade', 'ap_rottgers', 'cp', 'ap_uncertainty', 'cp_uncertainty'};
+% wlPrefix = {'ap', 'ap', 'cp', 'ap', 'cp'};
+if params.OUTPUT.USE_SLADE
+    data_type = {ap_data_slade, cp_data};
+elseif params.OUTPUT.USE_ROTTGERS
+    data_type = {ap_data_rottgers, cp_data};
+elseif params.OUTPUT.USE_FLAT
+    data_type = {ap_data_flat, cp_data};
+else
+    L.error('OutputManager','No ap data chosen for output');
+end;
+
+std_type = {ap_std_to_print, cp_std_to_print};
+dataFiles = {'ap', 'cp'};
+wlPrefix = {'ap', 'cp'};
+
+if ~exist(params.INGEST.DATA_OUTPUT_DIRECTORY, 'dir')
+    mkdir(params.INGEST.DATA_OUTPUT_DIRECTORY)
+    L.info('OutputManager','made new direcotry for output');
+end;
 %%
-for iData = 1:length(data)
+for iData = 1:length(data_type)
     % ----------------------------------------------------------------------
     % Step 2: Create Header
     % ----------------------------------------------------------------------
-    thisData = data{iData}; %ap_data_slade;
+    thisData = data_type{iData}; %ap_data_slade;
+    thisSTD = std_type{iData};
     thisFileName = dataFiles{iData}; %;
     thisPrefix = wlPrefix{iData}; %;
 
-    data_to_print = [lat_data lon_data temp_data sal_data thisData];
+    data_to_print = [lat_data lon_data temp_data sal_data thisData thisSTD];
     data_to_print = data_to_print(goodrows,:);
 
+    northLat = max(data_to_print(:,1));
+    southLat = min(data_to_print(:,1));
+    eastLon = max(data_to_print(:,2));
+    westLon = min(data_to_print(:,2));
+    
     % create list of units, get rid of last ','
-    apcp_units = char(repmat(uint8(strcat(params.INGEST.AC_UNITS, ',')), 1, length(wavelengths)));
+    apcp_units = char(repmat(uint8(strcat(params.INGEST.AC_UNITS, ',')), 1, 2*(length(wavelengths))));
     apcp_units(length(apcp_units)) = '';
 
     % build the extension name from the dataFile
@@ -224,87 +251,79 @@ for iData = 1:length(data)
 
     sb_hdr = {'date', 'time', 'lat', 'lon', 'Wt', 'sal'};
     % put all these fields into a matrix
-    sb_hdr = [sb_hdr strcat('ap', cellstr(num2str(wavelengths)))'];
+    sb_hdr = [sb_hdr strcat(thisPrefix, cellstr(num2str(wavelengths)))' strcat(thisPrefix, cellstr(num2str(wavelengths)), '_sd')'];
     % remove whitespace
     sb_hdr = strrep(sb_hdr, ' ', '');
 
     % name file
-    % fpath='d:\misclab\tara\Tara Processing\working\';
-%     fid = fopen(seabassFileName, 'wt');
     fid = fopen(seabassFileName, 'w', 'n', 'US-ASCII');
     
-    fprintf(fid,'/begin_header\n');
-    fprintf(fid,'/investigators=%s\n', params.OUTPUT.INVESTIGATOR );
-    fprintf(fid,'/affiliations=%s\n', params.OUTPUT.AFFILIATION );
-    fprintf(fid,'/contact=%s\n', params.OUTPUT.CONTACT);
-    fprintf(fid,'/experiment=%s\n', params.OUTPUT.EXPERIMENT);
-    fprintf(fid,'/cruise=');
-    fprintf(fid,cruise);
-    fprintf(fid,'\n');
-    fprintf(fid,'/station=NA\n');
-    fprintf(fid,'/data_file_name=');
-    fprintf(fid,strcat(sb_fname_ascii,extension));
-    fprintf(fid,'\n');
-    fprintf(fid,'/documents=%s\n', params.OUTPUT.DOCUMENTATION);
-    fprintf(fid,'/calibration_files=%s\n', params.OUTPUT.CALIBRATION_FILES);
-    fprintf(fid,'/data_type=%s\n', params.OUTPUT.DATA_TYPE);
-    fprintf(fid,'/data_status=%s\n', params.OUTPUT.DATA_STATUS);
-    fprintf(fid, '/start_date=%s\n', start_date);
-    fprintf(fid, '/end_date=%s\n', end_date);
-    fprintf(fid,'/start_time=%s[GMT]\n', start_time);
-    fprintf(fid,'/end_time=%s[GMT]\n', end_time);
-    fprintf(fid,'/north_latitude=%5.3f[DEG]\n', northLat);
-    fprintf(fid,'/south_latitude=%5.3f[DEG]\n', southLat);
-    fprintf(fid,'/east_longitude=%5.3f[DEG]\n', eastLon);
-    fprintf(fid,'/west_longitude=%5.3f[DEG]\n', westLon);
-    fprintf(fid,'/water_depth=NA\n');
-    fprintf(fid,'/measurement_depth=%s\n', params.OUTPUT.MEASUREMENT_DEPTH); % not allowed if depth is in the data
-    fprintf(fid,'/secchi_depth=NA\n');
-    fprintf(fid,'/cloud_percent=NA\n');
-    fprintf(fid,'/wind_speed=NA\n');
-    fprintf(fid,'/wave_height=NA\n');
-    fprintf(fid,'/missing=-9999\n');
-    fprintf(fid,'/delimiter=space\n');
-
-    fprintf(fid,'/fields=');
-    for j=1:length(sb_hdr)
-        if j < length(sb_hdr)
-            fprintf(fid, '%s,',cell2mat(sb_hdr(j)));
-            % added:
-        else
-            fprintf(fid, '%s',cell2mat(sb_hdr(j)));
-        end;
-    end
-    fprintf(fid,'\n');
-%        fprintf(fid,['/units=yyyymmdd,hh:mm:ss,degrees,degrees,degreesC,PSU,' apcp_units '\n']);
-
-    fprintf(fid,['/units=yyyymmdd,hh:mm:ss,degrees,degrees,degreesC,PSU,' apcp_units '\n']);
-    fprintf(fid,'/end_header\n');
-
-    % ----------------------------------------------------------------------
-    % Step 2: Create Data
-    % ----------------------------------------------------------------------
-
-    % for i=1:m
-    %     fprintf(fid, '%8s ',cell2mat(tmp_date(i,1)));
-    %     fprintf(fid, '%8s ',cell2mat(tmp_time(i,1)));
-    %     % fprintf(fid, '%20s ',cell2mat(sb_datetime(i)));
-    %     fprintf(fid,'%6.4f ',sb_dat_ap(i,:));
-    %     fprintf(fid,'\n');
-    % end
-    [nRows, ~]=size(data_to_print);
-    for thisRow = 1:nRows
-        fprintf(fid, '%8s ', cell2mat( timestamps_date_to_print( thisRow,1 )));
-        fprintf(fid, '%8s ', cell2mat( timestamps_time_to_print( thisRow,1 )));
-        % fprintf(fid, '%20s ',cell2mat(sb_datetime(i)));
-%         fprintf(fid,'%6.4f ', data_to_print(thisRow,:));
-        % print all columns except last with a space after
-        fprintf(fid,'%6.4f ', data_to_print(thisRow,1:end-1));
-        % print last column without a space
-        fprintf(fid,'%6.4f', data_to_print(thisRow,end));
+    if fid ~= -1
+        fprintf(fid,'/begin_header\n');
+        fprintf(fid,'/investigators=%s\n', params.OUTPUT.INVESTIGATOR );
+        fprintf(fid,'/affiliations=%s\n', params.OUTPUT.AFFILIATION );
+        fprintf(fid,'/contact=%s\n', params.OUTPUT.CONTACT);
+        fprintf(fid,'/experiment=%s\n', params.OUTPUT.EXPERIMENT);
+        fprintf(fid,'/cruise=');
+        fprintf(fid,cruise);
         fprintf(fid,'\n');
-    end
-    fclose(fid);
+        fprintf(fid,'/station=NA\n');
+        fprintf(fid,'/data_file_name=');
+        fprintf(fid,strcat(sb_fname_ascii,extension));
+        fprintf(fid,'\n');
+        fprintf(fid,'/documents=%s\n', params.OUTPUT.DOCUMENTATION);
+        fprintf(fid,'/calibration_files=%s\n', params.OUTPUT.CALIBRATION_FILES);
+        fprintf(fid,'/data_type=%s\n', params.OUTPUT.DATA_TYPE);
+        fprintf(fid,'/data_status=%s\n', params.OUTPUT.DATA_STATUS);
+        fprintf(fid, '/start_date=%s\n', start_date);
+        fprintf(fid, '/end_date=%s\n', end_date);
+        fprintf(fid,'/start_time=%s[GMT]\n', start_time);
+        fprintf(fid,'/end_time=%s[GMT]\n', end_time);
+        fprintf(fid,'/north_latitude=%5.3f[DEG]\n', northLat);
+        fprintf(fid,'/south_latitude=%5.3f[DEG]\n', southLat);
+        fprintf(fid,'/east_longitude=%5.3f[DEG]\n', eastLon);
+        fprintf(fid,'/west_longitude=%5.3f[DEG]\n', westLon);
+        fprintf(fid,'/water_depth=NA\n');
+        fprintf(fid,'/measurement_depth=%s\n', params.OUTPUT.MEASUREMENT_DEPTH); % not allowed if depth is in the data
+        fprintf(fid,'/secchi_depth=NA\n');
+        fprintf(fid,'/cloud_percent=NA\n');
+        fprintf(fid,'/wind_speed=NA\n');
+        fprintf(fid,'/wave_height=NA\n');
+        fprintf(fid,'/missing=-9999\n');
+        fprintf(fid,'/delimiter=space\n');
+
+        fprintf(fid,'/fields=');
+        for j=1:length(sb_hdr)
+            if j < length(sb_hdr)
+                fprintf(fid, '%s,',cell2mat(sb_hdr(j)));
+            else
+                fprintf(fid, '%s',cell2mat(sb_hdr(j)));
+            end;
+        end
+        fprintf(fid,'\n');
+        fprintf(fid,['/units=yyyymmdd,hh:mm:ss,degrees,degrees,degreesC,PSU,' apcp_units '\n']);
+        fprintf(fid,'/end_header\n');
+
+        % ----------------------------------------------------------------------
+        % Step 3: Create Data
+        % ----------------------------------------------------------------------
+
+        [nRows, ~]=size(data_to_print);
+        for thisRow = 1:nRows
+            fprintf(fid, '%8s ', cell2mat( timestamps_date_to_print( thisRow,1 )));
+            fprintf(fid, '%8s ', cell2mat( timestamps_time_to_print( thisRow,1 )));
+
+            % print all columns except last with a space after
+            fprintf(fid,'%6.4f ', data_to_print(thisRow,1:end-1));
+            
+            % print last column without a space
+            fprintf(fid,'%6.4f', data_to_print(thisRow,end));
+            fprintf(fid,'\n');
+        end
+        fclose(fid);
+    else
+        L.error('Outputmanager', sprintf('Failed to open file: %s', seabassFileName));
+    end;
     
 end   % for loop for data
 
