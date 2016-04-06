@@ -17,8 +17,8 @@
 close all;
 clear all;
 
-files = dir('c:/users/wendy/documents/data/tara/taraarctic/ag/*.csv');
-dir = 'c:/users/wendy/documents/data/tara/taraarctic/ag';
+files = dir('c:/users/wendy/documents/data/tara/taraarctic/bbp/*.csv');
+dir = 'c:/users/wendy/documents/data/tara/taraarctic/bbp';
 
 filelist = {files.name}';
 iconStrBase = 'http://maps.google.com/mapfiles/kml/shapes/';
@@ -30,11 +30,11 @@ for iFiles = 1:length(filelist)
     acs_tmp = [];
     seabassFileName = fullfile(dir, filelist{iFiles});
     shortFileName = filelist{iFiles};
-    variablesFromFileName = textscan(shortFileName, 'Tara_ACS_apcp%4s%s');
-    year = char(variablesFromFileName{1,1});
+    variablesFromFileName = textscan(shortFileName, 'Tara_Arctic_bbp%s');
+%     year = char(variablesFromFileName{1,1});
 %     yearday = char(variablesFromFileName{1,2});
 
-    datamatrix = importfileSeaBASSArctic(seabassFileName);
+    datamatrix = importfileSeaBASSArcticBBP(seabassFileName);
 
     date = char(cellstr(datamatrix(:,1)));
     time = char(cellstr(datamatrix(:,2)));

@@ -57,8 +57,8 @@ The code looks for three folders to put data in:
 - A directory for saving intermittant files during processing that will get 
 overwritten by the next YEAR_DAY processed (for now set to: TEMP/ )
 	
-1.  Create a directory for each of these, if it doesn't already exist
-and update readIngestParameters.m to reference the full path for each of these files.
+1.  Create a directory for each of these, if it doesn't already exist,
+and update accode.ini to reference the full path for each of these files.
 	
 2.  Make sure prepacs.exe is executable by your system.  You might need to 
 put it on your path.

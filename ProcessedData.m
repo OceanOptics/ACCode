@@ -1240,6 +1240,8 @@ classdef ProcessedData < handle
                 % get timestamps to asssign to cp/ap
                 timestamps = obj.getVar('name', fswType, 'level', 'filtered', 'data', 'binnedTime');
                 
+             
+                
                 % check matlab hasn't flipped arbitrarily
                 [r,c] = size(timestamps);
                 if r<c
@@ -1247,6 +1249,10 @@ classdef ProcessedData < handle
                 end;
                 % added 3/3/16
                 this_std = obj.getVar('name', tswType, 'level', 'binned', 'data' , 'std');
+                
+                % added 4/5/16
+                % get bin count
+                binCount = obj.getVar('name', tswType, 'level', 'binned', 'data', 'sample_size');
                 % -------------------------------------------------------
                 % make calculations
                 % -------------------------------------------------------
@@ -1285,6 +1291,7 @@ classdef ProcessedData < handle
                 pUncorr = removerows(pUncorr, removeIndex);
                 totalUncertainty = removerows(totalUncertainty, removeIndex);
                 this_std = removerows(this_std, removeIndex);
+                binCount = removerows(binCount, removeIndex);
                 
                 obj.L.debug('ProcessedData.calcParticulate', ...
                     sprintf('size of timestamps after: %u %u', size(timestamps)));
@@ -1311,7 +1318,10 @@ classdef ProcessedData < handle
                 obj.setVar( thisType, 'particulate', 'timestamps', timestamps);
                 
                 % set std
-                obj.setVar( thisType, 'particulate', 'std', this_std);                   
+                obj.setVar( thisType, 'particulate', 'std', this_std);  
+                
+                % set binCount
+                obj.setVar( thisType, 'particulate', 'binCount', binCount);
                       
             end;   % end for loop a/c
             
@@ -1355,6 +1365,7 @@ classdef ProcessedData < handle
             data = obj.getVar('name', thisType,'data','data');
             uncertainty = obj.getVar('name', thisType, 'data', 'uncertainty');
             this_std = obj.getVar('name', thisType, 'data', 'std');
+            binCount = obj.getVar('name', thisType, 'data', 'binCount');
 
             obj.L.debug('ProcessedData.removeWLAfter750', ...
                 sprintf('size wl before: %u x %u', size(wavelengths)));
@@ -1366,8 +1377,8 @@ classdef ProcessedData < handle
                 sprintf('size std before: %u x %u', size(this_std)));
             
             % run procedure
-            [wlCutoff, dataCutoff, varCutoff, stdCutoff] = ...
-                obj.cutWavelengths( wavelengths, data, uncertainty, this_std, 750);
+            [wlCutoff, dataCutoff, varCutoff, stdCutoff, binCountCutoff] = ...
+                obj.cutWavelengths( wavelengths, data, uncertainty, this_std, binCount, 750);
             
             
             obj.L.debug('ProcessedData.removeWLAfter750', ...
@@ -1386,14 +1397,16 @@ classdef ProcessedData < handle
             obj.setVar(thisType, 'below750', 'uncertainty', varCutoff );
             obj.setVar(thisType, 'below750', 'wavelengths', wlCutoff );
             obj.setVar(thisType, 'below750', 'std', stdCutoff );
+            obj.setVar(thisType, 'below750', 'binCount', binCountCutoff);
             
             obj.L.info('ProcessedData.removeWLAfter750', 'End of method');
             
         end %#removeWLAfter750
 
         %% cutWavelengths 
-        function [wlOut, dataOut, uncertaintyOut, stdOut] = ...
-                 cutWavelengths( obj, wavelengthsIn, dataIn, uncertaintyIn, stdIn, cutoffIn)
+        function [wlOut, dataOut, uncertaintyOut, stdOut, binCountOut] = ...
+                 cutWavelengths( obj, wavelengthsIn, dataIn, uncertaintyIn, ...
+                 stdIn, binCountIn, cutoffIn)
         %#cutWavelengths - removes data after a given wavelength "cutoff"
         %#               - sets a new wavelength at "cutoff" wl, if it
         %doesn't currently exist, and interpolates data for that wavelength
@@ -1418,6 +1431,7 @@ classdef ProcessedData < handle
             data = dataIn;
             uncertainty = uncertaintyIn;
             this_std = stdIn;
+            binCount = binCountIn;
             CUTOFF = cutoffIn;
 
             [rowIndex, ~] = find( wl > CUTOFF );
@@ -1446,6 +1460,9 @@ classdef ProcessedData < handle
                 stdEndAt750 = interp1( wl, this_std', wlEndAt750, 'linear', 'extrap');
                 stdEndAt750 = stdEndAt750';
                 
+                binCountEndAt750 = interp1( wl, binCount', wlEndAt750, 'linear', 'extrap');
+                binCountEndAt750 = binCountEndAt750';
+                
                 if wl(1) > wlEndAt750(1)
                     obj.L.debug('ProcessedData.cutWavelengths',...
                         'First wavelength being interpolated AFTER first wl being interpolated to -- will be NaN');
@@ -1461,12 +1478,14 @@ classdef ProcessedData < handle
                  dataEndAt750 = data;
                  uncEndAt750 = uncertainty;
                  stdEndAt750 = this_std;
+                 binCountEndAt750 = binCount;
             end;
             
             wlOut = wlEndAt750;
             dataOut = dataEndAt750;
             uncertaintyOut = uncEndAt750;
             stdOut = stdEndAt750;
+            binCountOut = binCountEndAt750;
             
             obj.L.info('ProcessedData.cutWavelengths','End of method');                 
         end  %#cutWavelength
@@ -1496,11 +1515,13 @@ classdef ProcessedData < handle
             cData = obj.getVar('name', 'cp', 'data', 'data');
             cUncertainty = obj.getVar('name', 'cp', 'data', 'uncertainty');
             cSTD = obj.getVar('name','cp', 'data', 'std');
+            cBinCount = obj.getVar('name', 'cp', 'data', 'binCount');
             
             aWavelengths = obj.meta.DeviceFile.aWavelengths;
             aData = obj.getVar('name', 'ap', 'data', 'data');
             aUncertainty = obj.getVar('name', 'ap', 'data', 'uncertainty');
             aSTD = obj.getVar('name', 'ap', 'data', 'std');
+            aBinCount = obj.getVar('name', 'ap', 'data', 'binCount');
             
             agData = obj.getVar('name', 'aFSW', 'data', 'interpolatedData');
             agUncertainty = obj.getVar('name', 'aFSW', 'data', 'interpolatedUncertainty');
@@ -1525,6 +1546,8 @@ classdef ProcessedData < handle
             apMatchedUnc = apMatchedUnc';
             apMatchedSTD = interp1( aWavelengths, aSTD', cWavelengths, 'linear', 'extrap');
             apMatchedSTD = apMatchedSTD';
+            apMatchedBinCount = interp1( aWavelengths, aBinCount', cWavelengths, 'linear', 'extrap');
+            apMatchedBinCount = apMatchedBinCount';
             
             agMatchedData = interp1( aWavelengths, agData', cWavelengths, 'linear', 'extrap');
             agMatchedData = agMatchedData';
@@ -1541,6 +1564,7 @@ classdef ProcessedData < handle
             obj.setVar('ap', 'matchedWL', 'uncertainty', apMatchedUnc);
             obj.setVar('ap', 'matchedWL', 'wavelengths', cWavelengths);
             obj.setVar('ap', 'matchedWL', 'std', apMatchedSTD);
+            obj.setVar('ap', 'matchedWL', 'binCount', apMatchedBinCount);
             
             obj.setVar('aFSW', 'matchedWL', 'data', agMatchedData);
             obj.setVar('aFSW', 'matchedWL', 'uncertainty', agMatchedUnc);
@@ -1550,6 +1574,7 @@ classdef ProcessedData < handle
             obj.setVar('cp', 'matchedWL', 'uncertainty', cUncertainty);
             obj.setVar('cp', 'matchedWL', 'wavelengths', cWavelengths);
             obj.setVar('cp', 'matchedWL', 'std', cSTD);
+            obj.setVar('cp', 'matchedWL', 'binCount', cBinCount);
             
             % get c interpolated and rename as matched cg
             cgData = obj.getVar('name', 'cFSW', 'data', 'interpolatedData');

@@ -83,6 +83,10 @@ cp_uncertainty = pd.getVar('name', 'cp', 'data', 'uncertainty');
 cp_std_to_print = pd.getVar('name', 'cp', 'data', 'std');
 ap_std_to_print = pd.getVar('name', 'ap', 'data', 'std');
 
+% added 4/5/16
+cp_bin_count = pd.getVar('name', 'cp', 'data', 'binCount');
+ap_bin_count = pd.getVar('name', 'ap', 'data', 'binCount');
+
 % GET ANCILLARY DATA: Temperature, Salinity, GPS
 temp_data = allData.TemperatureData.var.L3.BinnedLabTempData;
 temp_timestamps = allData.TemperatureData.var.L3.BinnedTimestamps;
@@ -216,6 +220,7 @@ else
 end;
 
 std_type = {ap_std_to_print, cp_std_to_print};
+binCount_type = {ap_bin_count, cp_bin_count};
 dataFiles = {'ap', 'cp'};
 wlPrefix = {'ap', 'cp'};
 
@@ -230,10 +235,11 @@ for iData = 1:length(data_type)
     % ----------------------------------------------------------------------
     thisData = data_type{iData}; %ap_data_slade;
     thisSTD = std_type{iData};
+    thisBinCount = binCount_type{iData};
     thisFileName = dataFiles{iData}; %;
     thisPrefix = wlPrefix{iData}; %;
 
-    data_to_print = [lat_data lon_data temp_data sal_data thisData thisSTD];
+    data_to_print = [lat_data lon_data temp_data sal_data thisData thisSTD thisBinCount];
     data_to_print = data_to_print(goodrows,:);
 
     northLat = max(data_to_print(:,1));
@@ -251,7 +257,9 @@ for iData = 1:length(data_type)
 
     sb_hdr = {'date', 'time', 'lat', 'lon', 'Wt', 'sal'};
     % put all these fields into a matrix
-    sb_hdr = [sb_hdr strcat(thisPrefix, cellstr(num2str(wavelengths)))' strcat(thisPrefix, cellstr(num2str(wavelengths)), '_sd')'];
+    sb_hdr = [sb_hdr strcat(thisPrefix, cellstr(num2str(wavelengths)))' ...
+        strcat(thisPrefix, cellstr(num2str(wavelengths)), '_sd')'...
+        strcat(thisPrefix, cellstr(num2str(wavelengths)), '_bincount')'];
     % remove whitespace
     sb_hdr = strrep(sb_hdr, ' ', '');
 
