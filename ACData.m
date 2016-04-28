@@ -15,8 +15,8 @@ classdef ACData < AncillaryData
         PPTimespan = 19200;
         SamplingFreq = 240;
         
-        FSWFreq = 50;      %number of minutes 50 == every 50 minutes
-        TSWDuration = 40;
+        FSWFreq = 60;      %number of minutes 50 == every 50 minutes
+        TSWDuration = 50;
         FSWDuration = 10;
         
         
@@ -377,15 +377,16 @@ classdef ACData < AncillaryData
             if length(goodTrans) >= 1 
                 obj.L.debug('ACData.syncTo', 'at least one goodTrans');
                 dataInGood = AncillaryDataIn.TransStartTime(AncillaryDataIn.TransStartFlag == 1);
-%                 dataInGood
+                dataInGood
                 [~,ind1] = min(abs(datenum(dataInGood) - datenum(goodTrans(1))));
-%                 ind1
+                ind1
                 closestGoodTime = dataInGood(ind1,:);
                 obj.L.debug('ACData.syncTo', ...
                     sprintf('closestGoodTime from ancillary: %s', datestr(closestGoodTime)));
                 
                 offset = closestGoodTime-goodTrans(1);
                 offsetAsDateVec = datevec(offset);
+                size(offsetAsDateVec)
                 obj.L.debug('ACData.syncTo', ...
                     sprintf('offset: H: %u M: %u S: %u', offsetAsDateVec(4), offsetAsDateVec(5), offsetAsDateVec(6)));
                 

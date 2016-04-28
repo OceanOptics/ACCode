@@ -19,7 +19,9 @@
 % MISCLab, University of Maine
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
-% Jan 2015; Last revision: 15-Feb-15
+% Jan 2016; Last revision: 25-Apr-16
+% 25-Apr-16: Added new file format that includes std and bin_count in
+% SeaBASS file formats
 % 
 %----------------------------- BEGIN CODE ---------------------------------
 %%Load data file from disk
@@ -38,8 +40,8 @@ end;
 
 %get wavelengths
 wavelengths = pd.var.ap.L8.wavelengths_slade;
-sb_fname_ascii = ['Tara_ACS_apcp' num2str(params.INGEST.YEAR) '_' ...
-    num2str(params.INGEST.YEAR_DAY)];
+sb_fname_ascii = [params.OUTPUT.SEABASS_FILE_PREFIX ...
+    num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY)];
 
 dataFiles = {'ap', 'cp'}; 
 fileText = {'ap - corrected using Slade', 'cp'};
@@ -55,7 +57,7 @@ for iData = 1:length(dataFiles)
     seabassFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
         strcat(sb_fname_ascii, extension));
 
-    datamatrix = importSeaBASS2(seabassFileName);
+    datamatrix = importSeaBASS3(seabassFileName);
 
     date = datamatrix(:,1);
     time = datamatrix(:,2);
@@ -63,8 +65,15 @@ for iData = 1:length(dataFiles)
     lon = datamatrix(:,4);
     Wt = datamatrix(:,5);
     sal = datamatrix(:,6);
-    numericCells = datamatrix(:,7:end-1);
-    thisdata = cell2mat(numericCells);
+%     numericCells = datamatrix(:,7:end-1);
+
+    numWavelengths = length(wavelengths);  
+    endColumn = 7 + numWavelengths - 1;
+    numericCells = datamatrix(:,7:endColumn);
+    
+%     thisdata = cell2mat(numericCells);
+% changed 4/25/16
+    thisdata=cellfun(@str2num,numericCells);
     index = (thisdata(:,:) == -9999);
     thisdata(index) = NaN;
 
@@ -78,6 +87,7 @@ for iData = 1:length(dataFiles)
     grid on;
     plot(wavelengths, thisdata)
     xlabel('Wavelength')
+    
     ylabel(thisFileName)
     title_text = sprintf('SeaBASS data\n %s vs. Wavelength\n Cruise: %s Leg: %s \n%u-%s-%u (Yearday: %u)', ...
         titleText, params.INGEST.CRUISE, params.INGEST.CRUISE_LEG, params.INGEST.DAY, ...

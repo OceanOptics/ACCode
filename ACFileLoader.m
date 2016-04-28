@@ -156,7 +156,6 @@ classdef ACFileLoader
                 % Logic is here because this is the object that knows about
                 % the specific FILE types -- 
                 
-%                 if length(origDataMatrix) > 0
                 if ~isempty(origDataMatrix)
                     
                     % increase iterator
@@ -200,7 +199,6 @@ classdef ACFileLoader
                     temp(nFilesWithGoodData).aRawDataMatrix = aRawDataMatrix;
                 else
                     % don't increase iterator, not good file
-                    
                     obj.L.debug('ACFileLoader.loadData()', ...
                         sprintf('No data: %u', nFiles));
                 end;
@@ -209,98 +207,125 @@ classdef ACFileLoader
 
             % ------------------------------------------------------------
             nGoodFiles = length(temp);
-            
+            numFilesAdded = 0;
+           
+            lastFileAddedFirstTS = NaN;
+            lastFileAddedLastTS = NaN;
             obj.L.debug('ACFileLoader.loadData()', ...
                 sprintf('checking timestamps.  Number of files to iterate through: %u', nGoodFiles));
 
             for iFiles = 1:nGoodFiles
-                
-                obj.L.info('ACFileLoader.loadData()', ...
-                    sprintf('iteration %u: filename: %s', iFiles, temp(iFiles).fileName));
-                
-                obj.L.info('ACFileLoader.loadData()', ...
-                    sprintf('----------------------------------------------------------'));
-
-                
                 [~, name, ext] = fileparts(temp(iFiles).fileName);
                 shortfilename = strcat(name, ext);
                 
+                obj.L.info('ACFileLoader.loadData()', ...
+                    sprintf('iteration %u: filename: %s', iFiles, shortfilename));
+                obj.L.info('ACFileLoader.loadData()', ...
+                    sprintf('----------------------------------------------------------'));
+                % set TS vars
+                thisFilesFirstTS = temp(iFiles).timestamps(1);                
+                thisFilesFirstTS_DV = datevec(temp(iFiles).timestamps(1));
                 
-                % if not last file
-                if iFiles ~= nGoodFiles
-                    %if the difference between the first timestamp of the
-                    %next file and the last timestamp of this file is more
-                    %than 2 hours, don't append (assume next day file?)
-                    
-                    obj.L.debug('ACFileLoader.loadData()', 'not last file');
-                    
-                    if ( temp(iFiles +1).timestamps(1) - temp(iFiles).timestamps(end) ) > datenum(0,0,0,2,0,0);
-                       obj.L.error('ACFileLoader.loadData()', 'greater than 2 hour gap between this and next file;');
-                       continue;
-                    end
-                    if iFiles > 1
-                        
-                        % if not first file, check this file ok
-                        if (temp(iFiles - 1).timestamps(end) >= temp(iFiles).timestamps(1))
-                            
+                thisFilesLastTS = temp(iFiles).timestamps(end);
+                thisFilesLastTS_DV = datevec(temp(iFiles).timestamps(end));
+                
+                % if not first file and a file has already been added
+                if (1 < iFiles) && (iFiles <= nGoodFiles) && numFilesAdded >= 1 
+
+                    if (lastFileAddedLastTS > thisFilesFirstTS)
+                         obj.L.debug('ACFileLoader.loadData()', ...
+                            '***************************************************');
+                        obj.L.debug('ACFileLoader.loadData()', ...
+                            'this file''s first TS is BEFORE the end of the previous file''s last TS.');
+                        obj.L.debug('ACFileLoader.loadData()', ...
+                            sprintf('this files first ts: %s', datestr(thisFilesFirstTS)));  %datestr(temp(iFiles).timestamps(1))));
+                        obj.L.debug('ACFileLoader.loadData()', ...                            
+                            sprintf('prev files last ts: %s', datestr(lastFileAddedLastTS))); %temp(iFiles - 1).timestamps(end))));
+                        if lastFileAddedLastTS > thisFilesLastTS
+                            obj.L.error('ACFileLoader.loadData()', ...
+                                'ERROR: this file''s last TS is also BEFORE the end of the previous file''s last TS');
+                            % don't add
+                            continue;
+                        else
                             obj.L.debug('ACFileLoader.loadData()', ...
-                                '***************************************************');
-                            obj.L.debug('ACFileLoader.loadData()', ...
-                                'this file''s first TS is BEFORE the end of the previous file''s last TS');
-                            obj.L.debug('ACFileLoader.loadData()', ...
-                                sprintf('this files first ts: %s', temp(iFiles).timestamps(1)));
-                            obj.L.debug('ACFileLoader.loadData()', ...                            
-                                sprintf('prev files last ts: %s', temp(iFiles - 1).timestamps(end)));
-                            
-                            if (temp(iFiles - 1).timestamps(end) > temp(iFiles).timestamps(end))
-                                obj.L.error('ACFileLoader.loadData()', ...
-                                    'this file''s last TS is also BEFORE the end of the previous file''s last TS');
-                                continue;
-                            else
-                                obj.L.debug('ACFileLoader.loadData()', ...
-                                    'this file''s last TS AFTER end of previous file''s last TS but there must be some overlap on beginning');
+                                'this file''s last TS AFTER end of last added files''s last TS but there must be some overlap on beginning');
 
                                 % find nearest last prev ts in this file, skip
                                 % overlapping records
-                                prevEndTime = temp(iFiles - 1).timestamps(end);
+                            obj.L.debug('ACFileLoader.loadData()', ...
+                                sprintf('previous end time: %s', datestr(lastFileAddedLastTS)));
                                 
-                                obj.L.debug('ACFileLoader.loadData()', ...
-                                    sprintf('previous end time: %s', datestr(prevEndTime)));
+                            [~,ind1] = min(abs(datenum(temp(iFiles).timestamps)-datenum(lastFileAddedLastTS)));
+                            closestStartTime = temp(iFiles).timestamps(ind1,:);
                                 
-                                [~,ind1] = min(abs(datenum(temp(iFiles).timestamps)-datenum(prevEndTime)));
-                                closestStartTime = temp(iFiles).timestamps(ind1,:);
+                            obj.L.debug('ACFileLoader.loadData()', ...
+                                sprintf('closestStartTime: %s', datestr(closestStartTime)));
+                            obj.L.debug('ACFileLoader.loadData()', ...
+                                sprintf('ind1: %u', ind1));
+                            obj.L.debug('ACFileLoader.loadData()', ...
+                                sprintf('check index.  difference: %s', datestr(closestStartTime - thisFilesFirstTS)));
                                 
-                                obj.L.debug('ACFileLoader.loadData()', ...
-                                    sprintf('closestStartTime: %s', datestr(closestStartTime)));
-                                obj.L.debug('ACFileLoader.loadData()', ...
-                                    sprintf('ind1: %u', ind1));
-                                obj.L.debug('ACFileLoader.loadData()', ...
-                                    sprintf('check index.  difference: %s', datestr(closestStartTime - temp(iFiles).timestamps(1))));
-                                
-                                % just blanking
-                                temp(iFiles).timestamps = temp(iFiles).timestamps(ind1+1:end, :);
-                                temp(iFiles).cRawDataMatrix = temp(iFiles).cRawDataMatrix(ind1+1:end, :);
-                                temp(iFiles).aRawDataMatrix = temp(iFiles).aRawDataMatrix(ind1+1:end, :);
+                            % just blanking
+                            temp(iFiles).timestamps = temp(iFiles).timestamps(ind1+1:end, :);
+                            temp(iFiles).cRawDataMatrix = temp(iFiles).cRawDataMatrix(ind1+1:end, :);
+                            temp(iFiles).aRawDataMatrix = temp(iFiles).aRawDataMatrix(ind1+1:end, :);
 
-                            end;
+                            end;  %if lastFileAddedLastTimestamp > thisFileLastTS
+                    else %(lastFileAddedLastTimestamp > thisFilesFirstTS)
+                        obj.L.debug('ACFileLoader.loadData()', ...
+                            sprintf('this files last timestamp is AFTER prev files first ts'));
+                        obj.L.debug('ACFileLoader.loadData()', ...
+                            sprintf('prev file last ts: %s', ...
+                            datestr(lastFileAddedLastTS, 'YY-mm-DD HH:MM:SS:FFF')));
+%                                 sprintf('prev file last ts: %s', datestr(temp(iFiles - 1).timestamps(end), 'YY-mm-DD HH:MM:SS:FFF')));
+                        obj.L.debug('ACFileLoader.loadData()', ...
+                            sprintf('this file first ts: %s', ...
+                            datestr(thisFilesFirstTS, 'YY-mm-DD HH:MM:SS:FFF')));
+%                                 sprintf('this file first ts: %s', datestr(temp(iFiles).timestamps(1), 'YY-mm-DD HH:MM:SS:FFF')));
+
+                    end;   % end check if last timestamp of previous file after first time stamp of this file
+                    if iFiles == nGoodFiles  % last file to be added
+                        % check this last file isn't more than 2 hours past
+                        % previous
+                        obj.L.debug('ACFileLoader.loadData()', 'Last file');
+                        if ((thisFilesFirstTS - lastFileAddedLastTS) > datenum(0,0,0,2,0,0)) ...
+                                && (thisFilesFirstTS_DV(3) ~= lastAddedFilesLastTS_DV(3))
+                           obj.L.error('ACFileLoader.loadData()', ...
+                               'ERROR: 2+ hr gap between last file and last added, Also: DIFFERENT DAY;');
                         else
                             obj.L.debug('ACFileLoader.loadData()', ...
-                                sprintf('this files last timestamp should be after prev files first ts'));
-                            obj.L.debug('ACFileLoader.loadData()', ...
-                                sprintf('time on last: %s', datestr(temp(iFiles - 1).timestamps(end), 'HH:MM:SS:FFF')));
-                            obj.L.debug('ACFileLoader.loadData()', ...
-                                sprintf('time on first: %s', datestr(temp(iFiles).timestamps(1), 'HH:MM:SS:FFF')));
+                                'Last file within 2 hours of last added file');
+                        end;
+                    end;
 
-                        end;   % end check if last timestamp of previous file after first time stamp of this file
-                    end;   % end check if not first file
+
+                elseif numFilesAdded == 0;   %if this is the first file to be added
+                    obj.L.debug('ACFileLoader.loadData()', 'No files added yet');
                     
-                    obj.L.debug('ACFileLoader.loadData()', 'outside if of check date is greater than 2 hours');
-               
-                end;  % if not last file
+                    %if the difference between the first timestamp of the
+                    %next file and the last timestamp of this file is more
+                    %than 2 hours, and is 100% a different day, don't use
+                    
+                    nextFilesFirstTimestampDV = datevec(temp(iFiles+1).timestamps(1));
+                    nextFilesFirstTimestamp = temp(iFiles+1).timestamps(1);
+
+                    if ((nextFilesFirstTimestamp - thisFilesLastTS) > datenum(0,0,0,2,0,0)) ...
+                            && nextFilesFirstTimestampDV(3) ~= thisFilesLastTS_DV(3);
+                       obj.L.error('ACFileLoader.loadData()', 'ERROR: greater than 2 hour gap between this and next file, and DIFFERENT DAY;');
+                       continue;
+                    else
+                        obj.L.debug('ACFileLoader.loadData()', 'First file within 2 hours of next OR same day');
+                        
+                    end;
+                end;  % (1 < iFiles <= nGoodFiles)  && numFilesAdded >= 1 
 
                 obj.L.debug('ACFileLoader.loadData()', 'should be ok to add file');
-
-
+                
+                % update 'lastFileAdded' timestamps
+                lastFileAddedFirstTS = thisFilesFirstTS;
+                lastFileAddedLastTS = thisFilesLastTS;
+                numFilesAdded = numFilesAdded + 1;
+                
                 % create new ACData, constructor: ACData(nameIn, dataValuesIn, timestampsIn
                 % acdata = ACData('testAC', [cRawData, aRawData], timestamps);                
                 % ------------------------------------------------------

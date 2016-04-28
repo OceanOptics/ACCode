@@ -61,11 +61,3 @@ Time1 = dataArray{:, 2};
 ValveState = dataArray{:, 3};
 Flow1 = dataArray{:, 4};
 
-%debug:
-Date1
-Time1
-size(Date1)
-size(Time1)
-size(ValveState)
-size(Flow1)
-

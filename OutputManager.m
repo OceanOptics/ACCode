@@ -241,6 +241,12 @@ for iData = 1:length(data_type)
 
     data_to_print = [lat_data lon_data temp_data sal_data thisData thisSTD thisBinCount];
     data_to_print = data_to_print(goodrows,:);
+    
+    data_size(:,:) = size(data_to_print);
+    if data_size(1) == 0
+        L.error('OutputManager', 'ERROR - NO DATA TO OUTPUT FOR SEABASS FILES');
+        continue;
+    end;
 
     northLat = max(data_to_print(:,1));
     southLat = min(data_to_print(:,1));

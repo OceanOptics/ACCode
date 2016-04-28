@@ -640,7 +640,8 @@ classdef ProcessedData < handle
                     % -----------------------------------------------------
 
                     checkPartOne = abs(bin_data_median(iBin,:) - bin_data_mean(iBin,:));
-                    checkPartTwo = ( 0.005 + ( 0.05*bin_data_median(iBin, :) ) );
+                    %changing this 7-apr-16 after naames crash
+                    checkPartTwo = ( 0.005 + ( 0.05*abs(bin_data_median(iBin, :)) ) );
                     thisBinMeanMedCheckFailIndex =  checkPartOne > checkPartTwo;
                  
                      if sum(sum(thisBinMeanMedCheckFailIndex)) == 0
@@ -649,8 +650,8 @@ classdef ProcessedData < handle
                             sprintf('No BAD data from mean median check for this bin: %u', iBin));  
                     else
                         % flag this bin as suspect
-                        obj.L.debug('ProcessedData.processFSW', ...
-                            sprintf('Yes, BAD data from mean median check for this bin: %u', iBin));                         
+%                         obj.L.debug('ProcessedData.processFSW', ...
+%                             sprintf('Yes, BAD data from mean median check for this bin: %u', iBin));                         
                         thisBinFlags(thisBinMeanMedCheckFailIndex) = 3;  % 1 == good
                         
                         obj.L.debug('ProcessedData.processFSW', ...
@@ -680,6 +681,51 @@ classdef ProcessedData < handle
                         end;
                     end;
 
+                    % 5.  Check STD
+%                     badSTDIndex =  zeros( numRows, numCols);
+%                     badSTDIndex(:,:) = NaN;
+%                     badSTDIndex(:,:) = bin_data_std(iBin,:) > .015;
+%                     badSTDIndex = bin_data_std(iBin,:) > .015;
+%                  
+%                     if sum(sum(badSTDIndex)) == 0
+%                         % if no bad bins - do nothing
+%                         obj.L.debug('ProcessedData.processFSW', ...
+%                             sprintf('No BAD data from STD check for this bin: %u', iBin));  
+%                     else
+%                         % flag this bin as suspect
+% %                         obj.L.debug('ProcessedData.processFSW', ...
+% %                             sprintf('Yes, BAD data from mean median check for this bin: %u', iBin));                         
+%                         thisBinFlags(badSTDIndex) = 3;  % 1 == good
+%                         
+%                         obj.L.debug('ProcessedData.processFSW', ...
+%                             sprintf('Number of bad STD wls for this bin: %u', sum(badSTDIndex)));                          
+%                         
+%                         % if we still want to use suspect bins
+%                         if obj.meta.Params.PROCESS.USE_SUSPECT_BINS 
+%                          obj.L.debug('ProcessedData.processFSW', ...
+%                             sprintf('we still want to use this BAD bin: %u', iBin));   
+%                         
+%                         % we don't want to use this bin
+%                         else
+%                             % NaN out all stats -- all wavelengths for this
+%                             % bin
+%                             
+%                             bin_data_mean(iBin,:) = NaN;
+%                             bin_data_median(iBin,:) = NaN;                    
+% 
+%                             bin_data_std(iBin,:) = NaN;
+%                             bin_data_variance(iBin,:) = NaN; 
+% 
+%                             bin_data_variance_over_mean(iBin,:) = NaN;
+% 
+%                             bin_data_variability_2(iBin,:) = NaN;
+%                             bin_data_variability_2(iBin,:) = NaN;
+%                             bin_uncertainty(iBin, :) = NaN;
+%                         end;
+%                     end;                   
+                    
+                    
+                    
                     % 6.  copy in final bin flag?
                     bin_flags(iBin,:) = thisBinFlags;
                     dataFlags(thisBinTimestampIndex,:) = thisBinDataFlags(:,:);
@@ -688,7 +734,7 @@ classdef ProcessedData < handle
 %                      obj.L.debug('ACData.processFSW', sprintf('Bin %u has no valid data', iBin));
                 end   % end check for valid data
 
-            end;    
+            end;    %for each bin
         obj.L.info('processFSW','End of Method');           
         end   %#processFSW
 

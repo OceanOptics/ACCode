@@ -546,7 +546,7 @@ end;  %if params.RUN.MANUAL_MODE
 % <----------------------------------------------------------------------->
 %%
 % find first good transition for flow, a/c
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.FLOW_EXISTS && params.PREPROCESS.USE_VALVE_AND_FLOW
     L.info('PreProcessingManager','Calling allData.FlowData.checkTransitions()');
     allData.FlowData.checkTransitions()
 else
@@ -694,12 +694,12 @@ end; %if params.RUN.CREATE_DEBUG_PLOTS
 
 %% SYNCHRONIZE Data
 
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.FLOW_EXISTS && params.PREPROCESS.USE_VALVE_AND_FLOW
 L.info('PreProcessingManager', 'Flow data exists for syncing to');
     allData.aData.syncTo(allData.FlowData);
     allData.cData.syncTo(allData.FlowData);
 else
-    L.info('PreProcessingManager', 'No flow exists for sync.  Copying regular data into SyncDataObject');
+    L.info('PreProcessingManager', 'Either No flow exists for sync, OR we aren''t using it.  Copying regular data into SyncDataObject');
     allData.aData.SyncDataObject = allData.aData.DataObject;
     allData.cData.SyncDataObject = allData.cData.DataObject;
 end;

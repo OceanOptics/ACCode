@@ -34,11 +34,9 @@
 % MISCLab, University of Maine
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
-% May 2015; Last revision: 24-Nov-15
-
+% May 2015; Last revision: 13-08-15
 
 %----------------------------- BEGIN CODE ---------------------------------
-
 %% Create file names
 % make a directory for this year day, if it doesn't already exist
 if ~exist(fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY))
@@ -61,12 +59,12 @@ devFile = ACDeviceFile( params.INGEST.DEVICE_FILE_LOCATION );
 %%
 % generate list of flow files
    
+   
 flowcurr = sprintf(params.INGEST.FLOW_FILE_FORMAT, params.INGEST.YEAR, params.INGEST.YEAR_DAY);
 flownext = sprintf(params.INGEST.FLOW_FILE_FORMAT, params.INGEST.YEAR, params.INGEST.YEAR_DAY+1);
 flowprev = sprintf(params.INGEST.FLOW_FILE_FORMAT, params.INGEST.YEAR, params.INGEST.YEAR_DAY-1);
 flowFiles = getFilesNextPrev(params.INGEST.FLOW_DIRECTORY, flowcurr, flownext, flowprev);
-%%
-% load data from Flow File
+%% load data from Flow File
 if size(flowFiles) >= 1
     ffl = FlowFileLoader(flowFiles, params.INGEST.FLOW_IMPORT_METHOD_NAME, 'flow', params.INGEST.FLOW_UNITS, 'valve', params.INGEST.VALVE_UNITS );
     flowData = ffl.loadData();
@@ -79,20 +77,22 @@ end;
 %%
 % generate list of tsg files
 % CHANGED FOR NAAMES:
-% tsgcurr = sprintf(params.INGEST.TSG_FILE_FORMAT, datestr(datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY), 'yymmdd'));
-% tsgnext = sprintf(params.INGEST.TSG_FILE_FORMAT, datestr(datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY+1), 'yymmdd'));
-% tsgprev = sprintf(params.INGEST.TSG_FILE_FORMAT, datestr(datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY-1), 'yymmdd'));
+tsgcurr = sprintf(params.INGEST.TSG_FILE_FORMAT, datestr(datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY), 'yymmdd'));
+tsgnext = sprintf(params.INGEST.TSG_FILE_FORMAT, datestr(datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY+1), 'yymmdd'));
+tsgprev = sprintf(params.INGEST.TSG_FILE_FORMAT, datestr(datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY-1), 'yymmdd'));
 
-tsgcurr = sprintf(params.INGEST.TSG_FILE_FORMAT, params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY);
-tsgnext = sprintf(params.INGEST.TSG_FILE_FORMAT, params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY+1);
-tsgprev = sprintf(params.INGEST.TSG_FILE_FORMAT, params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY-1);
 tsgFiles = getFilesNextPrev(params.INGEST.TSG_DIRECTORY, tsgcurr, tsgnext, tsgprev);
 
 %%
 % load data from TSG File
-tfl = TSGFileLoader( tsgFiles, params.INGEST.TSG_IMPORT_METHOD_NAME, 'temperature', ...
-    params.INGEST.TEMP_UNITS, 'salinity', params.INGEST.SAL_UNITS, 'gps', params.INGEST.GPS_UNITS );
-tsgData = tfl.loadData();
+% CHANGED FOR NAAMES:
+if size(tsgFiles) == [0,0]
+    L.info('IngestManager', 'No flow files found')
+else
+    tfl = NAAMES_TSGFileLoader( tsgFiles, params.INGEST.TSG_IMPORT_METHOD_NAME, 'temperature', ...
+    params.INGEST.TEMP_UNITS, 'salinity', params.INGEST.SAL_UNITS, 'gps', params.INGEST.GPS_UNITS ); 
+    tsgData = tfl.loadData();
+end;
 
 %%
 % generate list of AC files
@@ -103,9 +103,7 @@ acprev = sprintf(params.INGEST.AC_FILE_FORMAT, params.INGEST.AC_SERIAL_NUMBER, p
 acFiles = getFilesNextPrev(params.INGEST.AC_DIRECTORY, accurr, acnext, acprev);
 % prepacsOut = fullfile(params.INGEST.PREPACS_OUTPUT_DIRECTORY, params.INGEST.PREPACS_OUTPUT_FILE);
 prepacsOut = fullfile(params.INGEST.PREPACS_OUTPUT_DIRECTORY);
-%%
-% load data from AC files
-% ACFileLoader(fileNameListIn, importmethodIn, deviceFileIn, outputLocationIn)
+
 acFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, params.INGEST.AC_ONLY_OUTPUT_FILE);
 if params.INGEST.USE_ACFILELOADER == true
     if strcmp( params.INGEST.AC_FILE_LOADER_TYPE, 'bin')
@@ -171,7 +169,6 @@ allData = ACPlusAncillaryData( devFile, dataMatrix, params );
 
 %% Save data to disk
 save( matFileName, 'allData');
-save( paramsFileName, 'params');
 
 %% Make final plot
 figure(4)
