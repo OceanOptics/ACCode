@@ -313,16 +313,19 @@ classdef ACFileLoader
                     %next file and the last timestamp of this file is more
                     %than 2 hours, and is 100% a different day, don't use
                     
-                    nextFilesFirstTimestampDV = datevec(temp(iFiles+1).timestamps(1));
-                    nextFilesFirstTimestamp = temp(iFiles+1).timestamps(1);
+                    if size(temp,2) > 1
+                      nextFilesFirstTimestampDV = datevec(temp(iFiles+1).timestamps(1));
+                      nextFilesFirstTimestamp = temp(iFiles+1).timestamps(1);
 
-                    if ((nextFilesFirstTimestamp - thisFilesLastTS) > datenum(0,0,0,2,0,0)) ...
-                            && nextFilesFirstTimestampDV(3) ~= thisFilesLastTS_DV(3);
-                       obj.L.error('ACFileLoader.loadData()', 'ERROR: greater than 2 hour gap between this and next file, and DIFFERENT DAY;');
-                       continue;
+                      if ((nextFilesFirstTimestamp - thisFilesLastTS) > datenum(0,0,0,2,0,0)) ...
+                              && nextFilesFirstTimestampDV(3) ~= thisFilesLastTS_DV(3);
+                         obj.L.error('ACFileLoader.loadData()', 'ERROR: greater than 2 hour gap between this and next file, and DIFFERENT DAY;');
+                         continue;
+                      else
+                          obj.L.debug('ACFileLoader.loadData()', 'First file within 2 hours of next OR same day');
+                      end;
                     else
-                        obj.L.debug('ACFileLoader.loadData()', 'First file within 2 hours of next OR same day');
-                        
+                      obj.L.debug('ACFileLoader.loadData()', 'Only one file in temp');
                     end;
                 end;  % (1 < iFiles <= nGoodFiles)  && numFilesAdded >= 1 
 
