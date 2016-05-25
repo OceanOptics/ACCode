@@ -37,6 +37,7 @@ classdef ACFileLoader
         FileNameList
         ImportMethodName
         DeviceFileName
+        PrepacsBin
         OutputLocation
         Units
         numWL
@@ -50,7 +51,7 @@ classdef ACFileLoader
 
         %%# ACFileLoader
         function obj = ACFileLoader(fileNameListIn, importmethodIn, ...
-                deviceFileIn, outputLocationIn, unitsIn, numWLIn)
+                deviceFileIn, outputLocationIn, unitsIn, numWLIn, prepacsBin)
             
             %#ACFileLoader creates the data objects for the imported data
             %#
@@ -61,6 +62,7 @@ classdef ACFileLoader
             %#    deviceFileIn      - the device file object for this data
             %#    outputLocationIn  - 
             %#    unitsIn           -
+            %#    prepacsBin        - name of binary to run prepacs
             %# OUTPUT obj - this object
             %#          
             if nargin > 0
@@ -98,6 +100,12 @@ classdef ACFileLoader
                     error('Need units')
                 end
                 obj.numWL = str2num(numWLIn);
+                
+                if ischar( prepacsBin )
+                    obj.PrepacsBin = prepacsBin;
+                else
+                    error('Need prepacs binary name')
+                end
             else
                 error('Supply an input argument')
             end   % end if nargin > 0
@@ -143,8 +151,7 @@ classdef ACFileLoader
                 
                 prepacs_output_filename = strcat(obj.OutputLocation, 'prepacs', num2str(iFiles), '.tmp');
                 
-%                 dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' obj.OutputLocation]);
-                dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
+                dos([obj.PrepacsBin ' ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
                 
                 % open the data file and retrieve data from it
                 fh = str2func(obj.ImportMethodName);
