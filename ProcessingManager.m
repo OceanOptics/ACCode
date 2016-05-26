@@ -434,9 +434,9 @@ legend('Binned Salinity Data');
 ax3 = subplot(2,2,3);
 grid on;
 hold on;
-scatter(allData.GPSData.var.L3.BinnedLatData, allData.GPSData.var.L3.BinnedLonData, [], allData.GPSData.var.L3.BinnedTimestamps)
-xlabel('Latitude')
-ylabel('Longitude')
+scatter(allData.GPSData.var.L3.BinnedLonData, allData.GPSData.var.L3.BinnedLatData, [], allData.GPSData.var.L3.BinnedTimestamps)
+xlabel('Longitude')
+ylabel('Latitude')
 legend('Binned GPS Data');
 
 % ap Data

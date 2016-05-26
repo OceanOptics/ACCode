@@ -153,19 +153,19 @@ classdef GPSData < AncillaryData
         
         function plotData(obj)
             ts = obj.DataObject;
-            scatter(ts.Data(:,1), ts.Data(:,2), [], ts.Time);
-            xlabel('Latitude')
-            ylabel('Longitude')
+            scatter(ts.Data(:,2), ts.Data(:,1), [], ts.Time);
+            xlabel('Longitude')
+            ylabel('Latitude')
             title(obj.Name)
         end
         function plotBinnedData(obj, fignumIn)
             figure(fignumIn)
             grid on;
             hold on;
-            scatter(obj.var.L3.BinnedLatData, obj.var.L3.BinnedLonData, ...
+            scatter(obj.var.L3.BinnedLonData, obj.var.L3.BinnedLatData, ...
                 [], obj.var.L3.BinnedTimestamps)
-            xlabel('Latitude')
-            ylabel('Longitude')
+            xlabel('Longitude')
+            ylabel('Latitude')
             title(obj.Name)
         end;
         
