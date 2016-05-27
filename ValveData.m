@@ -26,7 +26,7 @@
 
 %------------- BEGIN CODE --------------
 
-classdef ValveData < AncillaryData
+classdef ValveData < AncillaryInlineData
     properties
         Name
         Type = 'valve';
@@ -36,8 +36,6 @@ classdef ValveData < AncillaryData
         
         % preprocessing variables
         SmoothData
-        SamplingFreq
-        PPTimespan          
         TransStartData;
         TransStartTime;
         TransEndData;
@@ -55,7 +53,7 @@ classdef ValveData < AncillaryData
             % Call superclass constructor before accessing object
             % This statment cannot be conditionalized
                 
-            obj = obj@AncillaryData(nameIn, dataValuesIn, timestampsIn, unitsIn);
+            obj = obj@AncillaryInlineData(nameIn, dataValuesIn, timestampsIn, unitsIn);
             
             %%% Post-initialization %%%
             % Any code, including access to the object
@@ -71,21 +69,15 @@ classdef ValveData < AncillaryData
             startsIndex = find(diffArray < 0);
             endsIndex = find(diffArray > 0);
             
-            obj.TransStartTime = obj.DataObject.Time(startsIndex)
-            obj.TransEndTime = obj.DataObject.Time(endsIndex)
+            obj.TransStartTime = obj.DataObject.Time(startsIndex);
+            obj.TransEndTime = obj.DataObject.Time(endsIndex);
             obj.TransStartData = obj.DataObject.Data(startsIndex);
             obj.TransEndData = obj.DataObject.Data(endsIndex);
         end        
-          
-        function qaqc(obj)
-            disp('Stub for qaqc():');
-            obj.Name
-        end   % end QAQC()
-        
-        function bin(obj)
-            disp('Stub bin():');
-            obj.Name
-        end   % end Bin()
+        %%
+        % ----------------------------------------------------------------
+        % plots
+        % ----------------------------------------------------------------
         
         function plotTransitions(obj)
             hold on

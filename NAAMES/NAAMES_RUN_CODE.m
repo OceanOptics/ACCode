@@ -30,8 +30,7 @@
 params = ini2struct('NAAMES_accode.ini');
 % get year days from params. params will be overwritten by other files.
 
-daysToRun = params.INGEST.YEAR_DAYS;
-% daysToRun = 200;
+daysToRun = params.RUN.YEAR_DAYS;
 
 % for each yearday listed in accode.ini
 % process data

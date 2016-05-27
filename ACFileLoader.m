@@ -28,6 +28,7 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 13-08-15
+% May 2016 - Added ability to run from OSX
 
 %------------- BEGIN CODE --------------
 classdef ACFileLoader

@@ -136,8 +136,7 @@ classdef NAAMES_TSGFileLoader
                 % object doesn't need to know format from file
                 %
                 % date format here hardcoded -- change?
-                DATE_GMT
-                TIME_GMT
+
                 fullDate = datenum(strcat(DATE_GMT,TIME_GMT),  'yyyy/mm/ddHH:MM:SS.FFF');
                 
                 % -------------------------------------------------------

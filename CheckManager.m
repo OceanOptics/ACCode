@@ -103,7 +103,32 @@ for iData = 1:length(dataFiles)
 
     
 end;
-
+%%
 if params.INGEST.CLEAR_VARS
-%     clear pd;
+    clear dataFiles;
+    clear datamatrix;
+    clear date;
+    clear endColumn;
+    clear extension;
+    clear fignum;
+    clear fileText;
+    clear iData;
+    clear index;
+    clear lat;
+    clear lon;
+    clear numericCells;
+    clear numWavelengths;
+    clear sal;
+    clear sb_fname_ascii;
+    clear seabassFileName;
+    clear thisdata;
+    clear thisFileName;
+    clear thisPrefix;
+    clear time;
+    clear timestamp;
+    clear title_text;
+    clear titleText;
+    clear wavelengths;
+    clear wlPrefix;
+    clear Wt;
 end;

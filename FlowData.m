@@ -25,7 +25,7 @@
 % May 2015; Last revision: 13-08-15
 
 %------------- BEGIN CODE --------------
-classdef FlowData < AncillaryData
+classdef FlowData < AncillaryInlineData
     properties
         Name
         Type = 'Flow';
@@ -35,10 +35,6 @@ classdef FlowData < AncillaryData
         
         % preprocessing variables
         SmoothData         %smoothed data for finding transitions
-        PPTimespan = 4800; %in seconds 4800=80 min
-        SamplingFreq = 60; %per minute 60== 1/sec
-        FSWFreq = 50;      %number of minutes 50 == every 50 minutes
-        FSWDuration = 10;  %duration of filtered period in minutes
         TransStartData;    %start dataooint for FSW periods
         TransStartTime;    %start timestamp for FSW periods
         TransEndData;      %end datapoint for FSW periods
@@ -65,7 +61,7 @@ classdef FlowData < AncillaryData
             % Call superclass constructor before accessing object
             % This statment cannot be conditionalized
                 
-            obj = obj@AncillaryData(nameIn, dataValuesIn, timestampsIn, unitsIn);
+            obj = obj@AncillaryInlineData(nameIn, dataValuesIn, timestampsIn, unitsIn);
             
             %%% Post-initialization %%%
             % Any code, including access to the object
@@ -73,13 +69,13 @@ classdef FlowData < AncillaryData
         end
         
         %%# checkTransitions
-        function checkTransitions(obj)
+        function checkTransitions(obj, FSWFreq, FSWDuration)
              L = log4m.getLogger();
             %% check transitions are within expected time of each other
            
             % for each time in the list of start times
-            uppermargin = datenum(0,0,0,0, obj.FSWFreq + .1*obj.FSWFreq, 0);
-            lowermargin = datenum(0,0,0,0, obj.FSWFreq - .1*obj.FSWFreq, 0);
+            uppermargin = datenum(0,0,0,0, FSWFreq + .1*FSWFreq, 0);
+            lowermargin = datenum(0,0,0,0, FSWFreq - .1*FSWFreq, 0);
 
             if length(obj.TransStartTime) > 1
             
@@ -150,8 +146,8 @@ classdef FlowData < AncillaryData
                        end
                    end
                    % set margin
-                     FSWuppermargin = datenum(0,0,0,0, obj.FSWDuration + .2*obj.FSWDuration, 0);
-                     FSWlowermargin = datenum(0,0,0,0, obj.FSWDuration - .2*obj.FSWDuration, 0);
+                     FSWuppermargin = datenum(0,0,0,0, FSWDuration + .2*FSWDuration, 0);
+                     FSWlowermargin = datenum(0,0,0,0, FSWDuration - .2*FSWDuration, 0);
                      % check each duration is within margin
 %                      sprintf('lower limit %s', datestr(FSWuppermargin))
 %                      sprintf('upper limit %s', datestr(FSWlowermargin))
@@ -191,9 +187,9 @@ classdef FlowData < AncillaryData
         end
 
         %%# setRunningMeds
-        function setRunningMeds(obj)
+        function setRunningMeds(obj, PPTimespan, SamplingFreq)
             [obj.runningFSWmedian, obj.runningTSWmedian] = ...
-                findFSWTSWRunMeds(obj.SmoothData, obj.DataObject.Time, obj.PPTimespan, obj.SamplingFreq);
+                findFSWTSWRunMeds(obj.SmoothData, obj.DataObject.Time, PPTimespan, SamplingFreq);
         end
         
         %%# plotTransitions
@@ -235,15 +231,6 @@ classdef FlowData < AncillaryData
            
         end    
         
-        function qaqc(obj)
-            disp('Stub for qaqc():');
-            obj.Name
-        end   % end QAQC()
-        
-        function bin(obj)
-            disp('Stub bin():');
-            obj.Name
-        end   % end Bin()
         
          %% find transitions from running medians          
         function findTransitions( obj ) 
@@ -321,7 +308,10 @@ classdef FlowData < AncillaryData
             obj.TransEndTime = endTimes;
         end
         
-        
+        %%
+        % ----------------------------------------------------------------
+        % plots
+        % ----------------------------------------------------------------        
         function plotData(obj)
             
             ts = obj.DataObject;

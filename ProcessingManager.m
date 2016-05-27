@@ -52,7 +52,8 @@ if params.RUN.LOAD_PREPROCESS_DATA_FROM_DISK
         strcat('acsPREPROC', '_', num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY)));
     load(matFileName);
 %     paramsFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, 'params');
-%     load(paramsFileName);    
+%     load(paramsFileName);  
+    clear matFileName;
 end;
 
 % %%
@@ -113,6 +114,8 @@ pd.setVar('a', 'raw', 'data', rawA); %allData.aData.SyncDataObject.Data );
 pd.setVar('c', 'raw', 'data', rawC); %allData.cData.SyncDataObject.Data );
 pd.setVar('a', 'raw', 'timestamps', rawAT); %allData.aData.SyncDataObject.Time );
 pd.setVar('c', 'raw', 'timestamps', rawCT); %allData.cData.SyncDataObject.Time );
+varlist = {'rawA','rawC'};
+clear(varlist{:})
 
 % Create Level 2 Data ('preprocessed')
 pd.setVar('aTSW', 'preprocessed', 'data', aTSW);
@@ -123,6 +126,8 @@ pd.setVar('cTSW', 'preprocessed', 'data', cTSW);
 pd.setVar('cTSW', 'preprocessed', 'timestamps', rawCT); %allData.cData.SyncDataObject.Time );
 pd.setVar('cFSW', 'preprocessed', 'data', cFSW);
 pd.setVar('cFSW', 'preprocessed', 'timestamps', rawCT); %allData.cData.SyncDataObject.Time );
+varlist = {'aTSW','rawAT','aFSW','cTSW','cFSW','rawCT'};
+clear(varlist{:})
 
 pd.aExists = true;
 pd.cExists = true;
@@ -148,17 +153,26 @@ pd.cExists = true;
 pd.processBins();
 
 % calculate suspect data
-pd.calcSuspectData();
+pd.removeSuspectBins();
 % pd.calcSuspectFSWData()
 % pd.calcSuspectFSWData();
 
 % PLOT
 % NEED NOTE HERE ABOUT WHAT IS BEING PLOTTED
 % THESE ARE DEBUG PLOTS
-if params.RUN.CREATE_DEBUG_PLOTS
-    pd.plotFSWSuspectData(31, 20);
-    pd.plotTSWSuspectData(32, 20);
+% if params.RUN.CREATE_DEBUG_PLOTS
+if ~exist(params.INGEST.DATA_OUTPUT_DIRECTORY, 'dir')
+    mkdir(params.INGEST.DATA_OUTPUT_DIRECTORY)
+    L.info('ProcessingManager','made new directory for output');
 end;
+pd.plotFSWSuspectData(31, 20);
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+    strcat(num2str(params.INGEST.YEAR_DAY), '_FSW_rejects')));
+pd.plotTSWSuspectData(32, 20);
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+    strcat(num2str(params.INGEST.YEAR_DAY), '_TSW_rejects')));
+
+% end;
 % ------------------------------------------------------------------------ 
 % STEP 2: Get Filtered Spectra (INTERPOLATE): CREATES LEVEL L4 (FILTERED)
 % DATA
@@ -178,10 +192,6 @@ pd.interpolateFiltered();
 %%  Plot Data
 %THIS IS DEBUG PLOT
 pd.plotACInterpolatedData(33, 20);
-if ~exist(params.INGEST.DATA_OUTPUT_DIRECTORY, 'dir')
-    mkdir(params.INGEST.DATA_OUTPUT_DIRECTORY)
-    L.info('ProcessingManager','made new directory for output');
-end;
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
     strcat(num2str(params.INGEST.YEAR_DAY), '_filt_spec_median')));
 
@@ -223,7 +233,7 @@ if ap_size(1) ~= cp_size(1)
                 pd.var.ap.L5.uncertainty(end) = [];
                 pd.var.ap.L5.uncertainty(end) = [];
             else
-                L.error('ProcessingManager','gap between a tiimestamps and c timestamps is larger than 1');
+                L.error('ProcessingManager','gap between a timestamps and c timestamps is larger than 1');
             end;
         else
             L.error('ProcessingManager','neither a nor c seems to be bigger');
@@ -236,7 +246,7 @@ end;
 ap_size2 = size(pd.var.ap.L5.timestamps);
 cp_size2 = size(pd.var.cp.L5.timestamps);
 if ap_size2(1) ~= cp_size2(1)
-    L.error('ProcessingManager', 'tried to fix size gap between a and c tiemstamps and failed')
+    L.error('ProcessingManager', 'tried to fix size gap between a and c timestamps and failed')
 else
     L.info('ProcessingManager', 'adjusted gap between and c timestamps by 1');
 end;
@@ -423,8 +433,8 @@ legend('Binned Instrument Temperature Data')
 ax2 = subplot(2,2,2);
 grid on;
 hold on;
-dynamicDateTicks;
 plot(allData.SalinityData.var.L3.BinnedTimestamps, allData.SalinityData.var.L3.BinnedData, 'b')
+dynamicDateTicks;
 xlabel('Binned Timestamps');
 ylabel('Binned Salinity');
 legend('Binned Salinity Data');
@@ -434,34 +444,40 @@ legend('Binned Salinity Data');
 ax3 = subplot(2,2,3);
 grid on;
 hold on;
-scatter(allData.GPSData.var.L3.BinnedLatData, allData.GPSData.var.L3.BinnedLonData, [], allData.GPSData.var.L3.BinnedTimestamps)
-xlabel('Latitude')
-ylabel('Longitude')
+scatter(allData.GPSData.var.L3.BinnedLonData, allData.GPSData.var.L3.BinnedLatData, [], allData.GPSData.var.L3.BinnedTimestamps)
+xlabel('Longitude')
+ylabel('Latitude')
 legend('Binned GPS Data');
 
 % ap Data
 ax4 = subplot(2,2,4);
 hold on;
 grid on;
+% plot(pd.var.cp.L5.timestamps, pd.var.cp.L8.data(:,60))
+scatter(pd.var.aTSW.L3.binnedTime, pd.var.aTSW.L3.median(:,20))
 dynamicDateTicks;
-plot(pd.var.cp.L5.timestamps, pd.var.cp.L8.data(:,60))
 xlabel('Binned Timestamps');
-ylabel('cp - corrected, unsmoothed data');
+ylabel('aTSW binned');
 
 linkaxes([ax1,ax2,ax4], 'x');
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_temp_sal_gps_ap')));
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_temp_sal_gps_a')));
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_temp_sal_gps_a.jpg')));
 
-%% Save file
-% WANTED TO SAVE PD, BUT ALSO, RESAVE ALLDATA??
+%%
+% Save file
+if params.RUN.SAVE_DATA
     matFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
         strcat('acsPROC', '_', num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY)));
 
     save( '-v7.3', matFileName, 'pd');
-% 
+    clear matFileName;
+
     matFileName2 = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
         strcat('acsPREPROC', '_', num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY)));
 
     save(matFileName2, 'allData');
+    clear matFileName2;
+end;
 %% close variables
 
 if params.INGEST.CLEAR_VARS
@@ -490,4 +506,5 @@ if params.INGEST.CLEAR_VARS
     clear tData;
     clear tsToUse;
     clear tTime;
+    clear varlist;
 end;

@@ -23,29 +23,20 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 13-08-15
+% Apr 2016 - Revised plot to switch lat/long
+% 4-May-16 - editing to inherit from new interface, AncillaryNonInlineData
 
 %------------- BEGIN CODE --------------
 
-classdef GPSData < AncillaryData
+classdef GPSData < AncillaryNonInlineData
     properties
         Name
         Type = 'gps';
         Units
         
         DataObject   % a timeseries object
-
-        % processing variables for finding filtered
-        SmoothData
-        SamplingFreq
-        PPTimespan
-        TransStartData;
-        TransStartTime;
-        TransEndData;
-        TransEndTime;
         levelsMap;
-        
         var % Binned Data Variables 
-        
     end
     properties (Access = private)
         L;   % Logger
@@ -60,7 +51,7 @@ classdef GPSData < AncillaryData
             % Call superclass constructor before accessing object
             % This statment cannot be conditionalized
                 
-            obj = obj@AncillaryData(nameIn, dataValuesIn, timestampsIn, unitsIn);
+            obj = obj@AncillaryNonInlineData(nameIn, dataValuesIn, timestampsIn, unitsIn);
             
             %%% Post-initialization %%%
             % Any code, including access to the object
@@ -69,14 +60,6 @@ classdef GPSData < AncillaryData
             obj.L.debug('GPSData.GPSData()','Created object');
             
         end
-        
-        % ----------------------------------------------------------------
-        % qa/qc
-        % ----------------------------------------------------------------         
-        function qaqc(obj)
-            disp('Stub for qaqc():');
-            obj.Name
-        end   % end QAQC()
         
         % ----------------------------------------------------------------
         % bin
@@ -153,19 +136,19 @@ classdef GPSData < AncillaryData
         
         function plotData(obj)
             ts = obj.DataObject;
-            scatter(ts.Data(:,1), ts.Data(:,2), [], ts.Time);
-            xlabel('Latitude')
-            ylabel('Longitude')
+            scatter(ts.Data(:,2), ts.Data(:,1), [], ts.Time);
+            xlabel('Longitude')
+            ylabel('Latitude')
             title(obj.Name)
         end
         function plotBinnedData(obj, fignumIn)
             figure(fignumIn)
             grid on;
             hold on;
-            scatter(obj.var.L3.BinnedLatData, obj.var.L3.BinnedLonData, ...
+            scatter( obj.var.L3.BinnedLonData, obj.var.L3.BinnedLatData, ...
                 [], obj.var.L3.BinnedTimestamps)
-            xlabel('Latitude')
-            ylabel('Longitude')
+            xlabel('Longitude')
+            ylabel('Latitude')
             title(obj.Name)
         end;
         

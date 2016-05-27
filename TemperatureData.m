@@ -1,5 +1,5 @@
 %TemperatureData - Data object to hold all processing information for temperature data
-%TemperatureData inherits from AncillaryData
+%TemperatureData inherits from AncillaryNonInlineData
 %
 % Syntax:    obj = TemperatureData(nameIn, dataValuesIn, timestampsIn, unitsIn); 
 % Inputs:
@@ -12,7 +12,7 @@
 % Example: 
 %    td = TemperatureData('Temperature', [TemperatureInstr, TemperatureBoat], fullDate, obj.TemperatureUnits);
 %
-% Other m-files required: AncillaryData
+% Other m-files required: AncillaryData, AncillaryNonInlineData
 % Subfunctions: none
 % MAT-files required: none
 %
@@ -23,28 +23,18 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 13-08-15
+% 4-May-16 - editing to inherit from new interface, AncillaryNonInlineData
 
 %------------- BEGIN CODE --------------
 
-classdef TemperatureData < AncillaryData
+classdef TemperatureData < AncillaryNonInlineData
     properties
         Name
         Type = 'temperature';
         Units = 'degrees C';
         % a timeseries object
         DataObject
-        
-        SmoothData
-        
-        SamplingFreq
-        PPTimespan
-        TransStartData;
-        TransStartTime;
-        TransEndData;
-        TransEndTime;
-        
         var % Binned Data Variables
-        
         levelsMap;
          
     end
@@ -64,7 +54,7 @@ classdef TemperatureData < AncillaryData
             % Call superclass constructor before accessing object
             % This statment cannot be conditionalized
                 
-            obj = obj@AncillaryData(nameIn, dataValuesIn, timestampsIn, unitsIn);
+            obj = obj@AncillaryNonInlineData(nameIn, dataValuesIn, timestampsIn, unitsIn);
             
             %%% Post-initialization %%%
             % Any code, including access to the object
@@ -72,21 +62,12 @@ classdef TemperatureData < AncillaryData
             obj.L.debug('TemperatureData.TemperatureData()','Created object');
 
         end
-        
-        % ----------------------------------------------------------------
-        % qa/qc
-        % ----------------------------------------------------------------     
-        function qaqc(obj)
-            obj.L.debug('TemperatureData.qaqc()','Started method');
-        end   % end QAQC()
-        
+ 
         % ----------------------------------------------------------------
         % bin
         % ----------------------------------------------------------------
         function bin(obj, timestampsIn, paramsIn)
             
-%             obj.L.debug('TemperatureData.bin()', 'Start method');
-
             level = obj.levelsMap('binned');
             flagThreshold = paramsIn.GPS_GAP_THRESHOLD;
             binSize = paramsIn.BIN_SIZE;
@@ -112,11 +93,6 @@ classdef TemperatureData < AncillaryData
                 time = obj.DataObject.Time;
                 
                 % data will now be equal to or smaller than ac timestamps
-                
-%                   disp('size of timestamps now')
-%                   size(time)
-%                   datestr(time(1))
-%                   datestr(time(end))
 
                 [binFlags, obj.var.(level).BinnedTimestamps,  ...
                     obj.var.(level).NumberBins, obj.var.(level).BinIndexNumbers, ...

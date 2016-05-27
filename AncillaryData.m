@@ -13,30 +13,9 @@ classdef (Abstract) AncillaryData < handle
         DataObject
         
         % preprocessing data
-        SmoothData
-% we dont' need this for tsg data
-        SamplingFreq
-        PPTimespan
-        TransStartData;
-        TransStartTime;
-        TransEndData;
-        TransEndTime;
-               levelsMap;
-   end
-   properties
-
    end
    properties (Access = private)
        L   % logger
-%         levelsMap;   % map to processing levels
-       runningFSWmedian
-       runningTSWmedian
-        
-    end
-   methods (Abstract)
-
-       qaqc( obj )
-       bin( obj )
    end
    
    methods
@@ -77,19 +56,7 @@ classdef (Abstract) AncillaryData < handle
             
             % assign an initial quality code to each data record in matrix
             assignInitQualityCode(obj);
-            
-            % set up processing levels map
-            keySet = {'raw', ...   %L1
-                'preprocessed', ...%L2
-                'binned', ...      %L3
-                'filtered', ...    %L4
-                'particulate', ... %L5
-                'unsmoothed', ...  %L6
-                'below750', ...    %L7
-                'matchedWL', ...   %L8
-                'corrected'};      %L9
-            valueSet = {'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9'};
-            obj.levelsMap = containers.Map(keySet, valueSet);
+
             
         end   % end constructor
        
@@ -173,24 +140,7 @@ classdef (Abstract) AncillaryData < handle
             ts.DataInfo
         end 
         
-        function setSmoothData(obj)
-            
-            obj.L.debug('AncillaryData.setSmoothData', 'start');            
-            obj.SmoothData = filtfilt( ones(1,100)/100, 1, obj.DataObject.Data);
-            
-        end
-        
-        function plotSmoothData(obj)
-            
-            obj.L.debug('AncillaryData.plotSmoothData', 'start');
-            
-            scatter(obj.DataObject.Time, obj.SmoothData, '.');
-            xlabel('Timestamp');
-            ylabel(strcat(obj.Name, ' Smooth'));
-            title(obj.Name);
-            dynamicDateTicks;
-            
-        end        
+      
         
         function plotData(obj)
             
@@ -200,6 +150,194 @@ classdef (Abstract) AncillaryData < handle
             dynamicDateTicks();
             
         end   % end plotData
+        
+    %% ----------------------------------------------------------------
+    % Getter and Setter for Variables
+    % -----------------------------------------------------------------
+        %% setVar
+        function obj = setVar( obj, varNameIn, levelNameIn, dataNameIn, dataIn )
+        %#setVar sets any name/data pair into the right level in .var
+        %#
+        %# SYNOPSIS obj = setVar( obj, varNameIn, levelNameIn, dataNameIn, dataIn )
+        %# INPUT  obj            - the object
+        %#        varNameIn      - the var of the name/data pair being set, i.e. "ap"
+        %#        levelNameIn    - the name of the level to set the data in, i.e. "corrected"
+        %#        dataNameIn     - the name of the actual data, i.e. "timestamps"
+        %#        dataIn         - the actual data
+        %# OUTPUT obj            - the object
+        %#
+            
+            
+            obj.L.debug('ProcessedData.setVar()', 'in method');
+
+            level = obj.levelsMap(levelNameIn);
+            obj.var.(varNameIn).(level).(dataNameIn) = dataIn;
+            
+            %find index number for this level
+            levelInt = level(:,2);  % get just the number off
+            levelInt = str2num(levelInt);
+           
+
+            if isempty(obj.levelsFlags)
+                
+                % if no flags exist at all yet -- create flags and index
+                obj.L.debug('ProcessedData.setVar()', 'have no flags at all');
+                levelFlags = 1:9;
+                levelIndex = zeros(size(levelFlags));
+                levelIndex = logical(levelIndex);
+                obj.levelsFlags.(varNameIn).levelFlags = levelFlags;
+                obj.levelsFlags.(varNameIn).levelIndex = levelIndex;
+                obj.levelsFlags.(varNameIn).levelIndex(levelInt) = true;
+                
+            else
+                obj.L.debug('ProcessedData.setVar()','we do have flags');
+                
+                if ~isfield(obj.levelsFlags, varNameIn )
+                    
+                    % it's not empty - but need to check if we have this level
+                    obj.L.debug('ProcessedData.setVar()','have flags but not for this data');
+                    levelFlags = 1:9;
+                    levelIndex = zeros(size(levelFlags));
+                    levelIndex = logical(levelIndex);
+                    obj.levelsFlags.(varNameIn).levelFlags = levelFlags;
+                    obj.levelsFlags.(varNameIn).levelIndex = levelIndex;
+                    obj.levelsFlags.(varNameIn).levelIndex(levelInt) = true;
+                    
+                else
+                    
+                    % just update correct level
+                    obj.L.debug('ProcessedData.setVar()','have flags for this data');
+                    obj.levelsFlags.(varNameIn).levelIndex(levelInt) = true;
+                end;
+            end
+                
+        end; %#setVar
+        
+        %% getVar
+        function [varOut] = getVar( obj, varargin )
+        %#getVar gets any data out of the right level in .var
+        %#
+        %# SYNOPSIS [varOut] = getVar( obj, varargin )
+        %# INPUT  obj            - the object
+        %#        varNameIn      - the var of the name/data pair being set, i.e. "ap"
+        %#        levelNameIn    - the name of the level to set the data in, i.e. "corrected"
+        %#        dataNameIn     - the name of the actual data, i.e. "timestamps"
+        %# OUTPUT varOut         - the data
+        %#            
+            
+            obj.L.debug('ProcessedData.getVar()', 'in method');
+            
+            % check inputs
+            % check varName is one that exists. Create if it doesn't exist?
+            varNameIn = '';
+            levelNameIn = '';
+            dataNameIn = '';
+            
+            % loop through name/value pairs
+            if (~isempty(varargin))
+                iArg = 1;
+                while iArg < nargin
+%                     varargin{iArg};
+                    if strcmpi(varargin{iArg}, 'name')
+                        varNameIn = varargin{iArg+1};
+                    elseif strcmpi(varargin{iArg}, 'level')
+                        levelNameIn = varargin{iArg+1};
+                    elseif strcmpi(varargin{iArg}, 'data')
+                        dataNameIn = varargin{iArg+1};
+                    else
+                        obj.L.error('ProcessedData.getVar', 'invalid argument');
+                    end;
+                    iArg = iArg + 2;
+                end;  % while loop
+            else
+                obj.L.error('ProcessedData.getVar', 'no argument');
+            end;
+            
+            % get variable - by name, level and datatype
+            if ~isempty(varNameIn) && ~isempty(levelNameIn) && ~isempty(dataNameIn)
+                
+                % lookup level
+                level = obj.levelsMap(levelNameIn);
+                
+                % check this data field exists for this level of data
+                if isfield(obj.var.(varNameIn).(level), dataNameIn )
+                    varOut = obj.var.(varNameIn).(level).(dataNameIn);
+                    obj.L.debug('ProcessedData.getVar()', ...
+                        sprintf('level: %s', level));
+                else
+                    obj.L.error('ProcessedData.getVar', 'invalid data name');
+                end;
+                
+            elseif ~isempty(varNameIn) && ~isempty(levelNameIn) && isempty(dataNameIn)
+                obj.L.debug('ProcessedData.getVar()', ...
+                    'have both name and level, don''t need data -- getting specific level');
+                
+                % lookup level
+                level = obj.levelsMap(levelNameIn);
+
+                if isfield(obj.var.(varNameIn), level )
+                    varOut = obj.var.(varNameIn).(level);
+                else
+                    obj.L.error('ProcessedData.getVar', 'invalid level');
+                end;
+
+            elseif ~isempty(varNameIn) && isempty(levelNameIn)  && isempty(dataNameIn)
+                obj.L.debug('ProcessedData.getVar()', ...
+                    'have name, don''t need data -- need to find most recent level');
+                
+                % find most recent level
+                idx = obj.levelsFlags.(varNameIn).levelIndex;
+                thisLevels = obj.levelsFlags.(varNameIn).levelFlags(idx);
+                
+                % if we have data for this var:
+                if ~isempty(thisLevels)
+                    maxLevel = max(thisLevels);
+                    level = sprintf('L%u', maxLevel);
+                    varOut = obj.var.(varNameIn).(level);
+                else
+                    obj.L.error('ProcessedData.getVar()', 'no data for this variable');
+                end;
+                
+
+            elseif ~isempty(varNameIn) && isempty(levelNameIn)  && ~isempty(dataNameIn)
+            % if we have a variable name and a data field name, but no
+            % specific level, get the highest level we have for this
+            % data field for this variable                
+                
+                idx = obj.levelsFlags.(varNameIn).levelIndex;
+                thisLevels = obj.levelsFlags.(varNameIn).levelFlags(idx);
+                
+                % if we have data for this var:
+                if ~isempty(thisLevels)
+                    minLevel = min(thisLevels);
+                    maxLevel = max(thisLevels);
+                    for iLevel = minLevel:maxLevel
+                        level = sprintf('L%u', iLevel);
+                        levelExists = isfield(obj.var.(varNameIn), level);
+                        if levelExists 
+                            dataExists = isfield(obj.var.(varNameIn).(level), dataNameIn );
+                            if dataExists % at this level
+                                varOut = obj.var.(varNameIn).(level).(dataNameIn);
+                                obj.L.debug('ProcessedData.getVar()', ...
+                                    sprintf('setting data to level: %s', level));
+
+                            else
+                                obj.L.debug('ProcessedData.getVar()', ...
+                                    'data doesn''t exist at this level');
+                            end;
+                        else
+                            obj.L.debug('ProcessedData.getVar()', ...
+                                'level doesn''t exist');
+                        end;
+                    end;   % for loop through levels
+                else
+                    obj.L.error('ProcessedData.getVar()', 'no data for this variable');
+                end;  %isempty(thisLevels)              
+            else
+                obj.L.error('ProcessedData.getVar', 'problem');
+            end; %~isempty(varNameIn) && ~isempty(levelNameIn) && ~isempty(dataNameIn)
+                
+        end; %#getVar
    end
      
 end

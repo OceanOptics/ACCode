@@ -1,5 +1,5 @@
 %SalinityData - Data object to hold all processing information for salinity data
-%SalinityData inherits from AncillaryData
+%SalinityData inherits from AncillaryNonInlineData
 %
 % Syntax:   obj = SalinityData(nameIn, dataValuesIn, timestampsIn, unitsIn)
 % Inputs:
@@ -12,7 +12,7 @@
 % Example: 
 %    sd = SalinityData('Salinity', Salinity, fullDate, obj.SalinityUnits); 
 %
-% Other m-files required: AncillaryData
+% Other m-files required: AncillaryData, AncillaryNonInlineData
 % Subfunctions: none
 % MAT-files required: none
 %
@@ -23,27 +23,18 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 13-08-15
+% 4-May-16 - editing to inherit from new interface, AncillaryNonInlineData
 
 %------------- BEGIN CODE --------------
 
-classdef SalinityData < AncillaryData
+classdef SalinityData < AncillaryNonInlineData
     properties
         Name            % name for printing on plots, etc.
         Type = 'gps';   % type of file this data comes from
         Units           % units of measurement
         
         DataObject      % a timeseries object that will hold data, time
-        
-        SmoothData      
-        SamplingFreq
-        PPTimespan
-        TransStartData;
-        TransStartTime;
-        TransEndData;
-        TransEndTime;
         levelsMap;
-        
-        
         var            % Binned Data Variables 
     end
     properties (Access = private)
@@ -61,17 +52,13 @@ classdef SalinityData < AncillaryData
             % Call superclass constructor before accessing object
             % This statment cannot be conditionalized
                 
-            obj = obj@AncillaryData(nameIn, dataValuesIn, timestampsIn, unitsIn);
+            obj = obj@AncillaryNonInlineData(nameIn, dataValuesIn, timestampsIn, unitsIn);
             
             %%% Post-initialization %%%
             % Any code, including access to the object
             obj.L = log4m.getLogger();
             obj.L.debug('SalinityData.SalinityData()','Created object');
         end
-
-        function qaqc(obj)
-            obj.L.debug('SalinityData.qaqc()', 'Start method');
-        end   % end QAQC()
         
         % ----------------------------------------------------------------
         % bin
@@ -101,23 +88,16 @@ classdef SalinityData < AncillaryData
             elseif strcmpi(methodIn, 'bin')
                 data = obj.DataObject.Data;
                 time = obj.DataObject.Time;
-%                 size(time)
-%                 size(data)
+
                 % limit to AC bin size
                 startTimestamp = timestampsIn(1);
                 endTimestamp = timestampsIn(end);
-                
-%                 datestr(startTimestamp)
-%                 datestr(endTimestamp)
                 
                 % check for timestamps before first timestamps or after
                 % last timestamp
                 removeTimestamps = time < startTimestamp | time > endTimestamp;
                 time(removeTimestamps) = [];
                 data(removeTimestamps,:) = [];
-                
-%                 size(time)
-%                 size(data)
           
                 [binFlags, obj.var.(level).BinnedTimestamps,  ...
                     obj.var.(level).NumberBins, obj.var.(level).BinIndexNumbers, ...
