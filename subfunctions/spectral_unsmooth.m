@@ -118,10 +118,20 @@ if acs==1;  % if AC-S
                 xixi=minwavel:.1:maxwavel;% The range of centwavel is 0.1 nm.
                 yiyi=spline(wl,ap,xixi); % Spline the measured data to every 0.1 nm.
                 % We need data from 350nm to 799 nm to multiply by filtfac.
-                absspec=zeros(size(wavelength));
-                absspec((minwavel-350)*10+1:(maxwavel-350)*10+1)=yiyi;
-                absspec(1:(minwavel-350)*10)=interp1(wl,ap,wavelength(1:(minwavel-350)*10),'linear','extrap');
-                absspec((maxwavel-350)*10+2:length(wavelength))=absspec((maxwavel-350)*10+1);%0;
+%                 absspec=zeros(size(wavelength));
+%                 absspec((minwavel-350)*10+1:(maxwavel-350)*10+1)=yiyi;
+%                 absspec(1:(minwavel-350)*10)=interp1(wl,ap,wavelength(1:(minwavel-350)*10),'linear','extrap');
+%                 absspec((maxwavel-350)*10+2:length(wavelength))=absspec((maxwavel-350)*10+1);%0;
+
+                % changes 16-May-2016 to get rid of warning re. integer
+                % operands:
+              
+                absspec(floor((minwavel-350)*10+1):floor((maxwavel-350)*10+1)) = yiyi;
+                absspec(1:floor((minwavel-350)*10)) = ...
+                    interp1(wl, ap, wavelength(1:floor((minwavel-350)*10)), 'linear', 'extrap');
+                absspec(floor((maxwavel-350)*10+2):length(wavelength)) = ...
+                    absspec(floor((maxwavel-350)*10+1));%0;
+
                 aspecprime=absspec';
 
                 clear meassignal6
