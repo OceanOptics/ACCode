@@ -40,6 +40,7 @@ classdef ACFileLoader
         OutputLocation
         Units
         numWL
+        PrepacsLocation
         
     end
     properties (SetAccess = private, GetAccess = private)
@@ -50,7 +51,7 @@ classdef ACFileLoader
 
         %%# ACFileLoader
         function obj = ACFileLoader(fileNameListIn, importmethodIn, ...
-                deviceFileIn, outputLocationIn, unitsIn, numWLIn)
+                deviceFileIn, outputLocationIn, unitsIn, numWLIn, prepacsLocationIn)
             
             %#ACFileLoader creates the data objects for the imported data
             %#
@@ -93,11 +94,17 @@ classdef ACFileLoader
                 end
                 
                 if ischar( unitsIn )
+                    obj.PrepacsLocation = prepacsLocationIn;
+                else
+                    error('Need location of prepacs.exe')
+                end
+                if ischar( unitsIn )
                     obj.Units = unitsIn;
                 else
                     error('Need units')
                 end
                 obj.numWL = str2num(numWLIn);
+                
             else
                 error('Supply an input argument')
             end   % end if nargin > 0
@@ -143,8 +150,13 @@ classdef ACFileLoader
                 
                 prepacs_output_filename = strcat(obj.OutputLocation, 'prepacs', num2str(iFiles), '.tmp');
                 
-%                 dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' obj.OutputLocation]);
-                dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
+                if ispc
+%                     dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
+                    dos([obj.PrepacsLocation ' ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
+                else
+%                     dos(['wine /Users/nils/Documents/MATLAB/ACCode/prepacs.exe ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
+                    dos(['wine ' obj.PrepacsLocation ' ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
+                end;
                 
                 % open the data file and retrieve data from it
                 fh = str2func(obj.ImportMethodName);
@@ -288,8 +300,9 @@ classdef ACFileLoader
                         % check this last file isn't more than 2 hours past
                         % previous
                         obj.L.debug('ACFileLoader.loadData()', 'Last file');
+                        lastFileAddedLastTS_DV = datevec(lastFileAddedLastTS);
                         if ((thisFilesFirstTS - lastFileAddedLastTS) > datenum(0,0,0,2,0,0)) ...
-                                && (thisFilesFirstTS_DV(3) ~= lastAddedFilesLastTS_DV(3))
+                                && (thisFilesFirstTS_DV(3) ~= lastFileAddedLastTS_DV(3))
                            obj.L.error('ACFileLoader.loadData()', ...
                                'ERROR: 2+ hr gap between last file and last added, Also: DIFFERENT DAY;');
                         else
