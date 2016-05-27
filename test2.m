@@ -7,3 +7,4 @@ y = sin(2*pi*x/25);
 figure(1);
 plot(x,y);
 grid on;
+title('Test');
