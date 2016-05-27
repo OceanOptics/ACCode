@@ -41,18 +41,7 @@ classdef AncillaryInlineData < AncillaryData
             obj.L.debug('AncilllaryInlineData.ACData()','Created object');
             %setInfo(obj, nameIn);
                         
-            % set up processing levels map
-            keySet = {'raw', ...   %L1
-                'preprocessed', ...%L2
-                'binned', ...      %L3
-                'filtered', ...    %L4
-                'particulate', ... %L5
-                'unsmoothed', ...  %L6
-                'below750', ...    %L7
-                'matchedWL', ...   %L8
-                'corrected'};      %L9
-            valueSet = {'L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7', 'L8', 'L9'};
-            obj.levelsMap = containers.Map(keySet, valueSet);
+
             
            end
            

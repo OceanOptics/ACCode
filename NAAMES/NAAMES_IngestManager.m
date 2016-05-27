@@ -109,7 +109,7 @@ if params.INGEST.USE_ACFILELOADER == true
     if strcmp( params.INGEST.AC_FILE_LOADER_TYPE, 'bin')
         acfl = ACFileLoader( acFiles, params.INGEST.AC_IMPORT_METHOD_NAME, ...
             params.INGEST.DEVICE_FILE_LOCATION, prepacsOut, params.INGEST.AC_UNITS, ...
-            devFile.NumberWavelengths, params.INGEST.PREPACS_LOCATION);
+            devFile.NumberWavelengths, params.INGEST.PREPACS_BIN);
     else
         acfl = ACFileLoaderDat( acFiles, params.INGEST.AC_IMPORT_METHOD_NAME, ...
             params.INGEST.DEVICE_FILE_LOCATION, prepacsOut, params.INGEST.AC_UNITS, ...
@@ -181,13 +181,15 @@ dynamicDateTicks;
 xlabel('Time');
 ylabel('a Data');
 legend('a Data');
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.FLOW_EXISTS && ~isempty(allData.ValveData)
     ax2 = subplot(3,1,2);
     dynamicDateTicks;
     plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
     xlabel('Time');
     ylabel('Valve Data');
     legend('Valve Data');
+elseif params.INGEST.FLOW_EXISTS && isempty(allData.ValveData)
+  L.info('IngestManager', ' No valve data contradict with parameter settings.')
 end;
 ax3 = subplot(3,1,3);
 dynamicDateTicks;
@@ -195,11 +197,10 @@ scatter(allData.TemperatureData.DataObject.Time, allData.TemperatureData.DataObj
 xlabel('Time');
 ylabel('Temperature Data');
 legend('Temperature Data');
-if params.INGEST.FLOW_EXISTS
-
-    linkaxes([ax1, ax2, ax3], 'x');
+if params.INGEST.FLOW_EXISTS && ~isempty(allData.ValveData)
+  linkaxes([ax1, ax2, ax3], 'x');
 else
-        linkaxes([ax1, ax3], 'x');
+  linkaxes([ax1, ax3], 'x');
 end
 
 %% close variables

@@ -38,6 +38,7 @@ classdef ACFileLoader
         FileNameList
         ImportMethodName
         DeviceFileName
+        PrepacsBin
         OutputLocation
         Units
         numWL
@@ -52,8 +53,8 @@ classdef ACFileLoader
 
         %%# ACFileLoader
         function obj = ACFileLoader(fileNameListIn, importmethodIn, ...
-                deviceFileIn, outputLocationIn, unitsIn, numWLIn, prepacsLocationIn)
-            
+                deviceFileIn, outputLocationIn, unitsIn, numWLIn, prepacsBin)
+           
             %#ACFileLoader creates the data objects for the imported data
             %#
             %# SYNOPSIS ACFileLoaderDat(fileNameListIn, importmethodIn, deviceFileIn, outputLocationIn, unitsIn)
@@ -63,6 +64,7 @@ classdef ACFileLoader
             %#    deviceFileIn      - the device file object for this data
             %#    outputLocationIn  - 
             %#    unitsIn           -
+            %#    prepacsBin        - name of binary to run prepacs
             %# OUTPUT obj - this object
             %#          
             if nargin > 0
@@ -95,17 +97,17 @@ classdef ACFileLoader
                 end
                 
                 if ischar( unitsIn )
-                    obj.PrepacsLocation = prepacsLocationIn;
-                else
-                    error('Need location of prepacs.exe')
-                end
-                if ischar( unitsIn )
                     obj.Units = unitsIn;
                 else
                     error('Need units')
                 end
                 obj.numWL = str2num(numWLIn);
                 
+                if ischar( prepacsBin )
+                    obj.PrepacsBin = prepacsBin;
+                else
+                    error('Need prepacs binary name')
+                end
             else
                 error('Supply an input argument')
             end   % end if nargin > 0
@@ -151,13 +153,7 @@ classdef ACFileLoader
                 
                 prepacs_output_filename = strcat(obj.OutputLocation, 'prepacs', num2str(iFiles), '.tmp');
                 
-                if ispc
-%                     dos(['PREPACS.EXE ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
-                    dos([obj.PrepacsLocation ' ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
-                else
-%                     dos(['wine /Users/nils/Documents/MATLAB/ACCode/prepacs.exe ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
-                    dos(['wine ' obj.PrepacsLocation ' ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
-                end;
+                dos([obj.PrepacsBin ' ' obj.DeviceFileName ' ' fileName ' ' prepacs_output_filename]);
                 
                 % open the data file and retrieve data from it
                 fh = str2func(obj.ImportMethodName);
@@ -320,16 +316,19 @@ classdef ACFileLoader
                     %next file and the last timestamp of this file is more
                     %than 2 hours, and is 100% a different day, don't use
                     
-                    nextFilesFirstTimestampDV = datevec(temp(iFiles+1).timestamps(1));
-                    nextFilesFirstTimestamp = temp(iFiles+1).timestamps(1);
+                    if size(temp,2) > 1
+                      nextFilesFirstTimestampDV = datevec(temp(iFiles+1).timestamps(1));
+                      nextFilesFirstTimestamp = temp(iFiles+1).timestamps(1);
 
-                    if ((nextFilesFirstTimestamp - thisFilesLastTS) > datenum(0,0,0,2,0,0)) ...
-                            && nextFilesFirstTimestampDV(3) ~= thisFilesLastTS_DV(3);
-                       obj.L.error('ACFileLoader.loadData()', 'ERROR: greater than 2 hour gap between this and next file, and DIFFERENT DAY;');
-                       continue;
+                      if ((nextFilesFirstTimestamp - thisFilesLastTS) > datenum(0,0,0,2,0,0)) ...
+                              && nextFilesFirstTimestampDV(3) ~= thisFilesLastTS_DV(3);
+                         obj.L.error('ACFileLoader.loadData()', 'ERROR: greater than 2 hour gap between this and next file, and DIFFERENT DAY;');
+                         continue;
+                      else
+                          obj.L.debug('ACFileLoader.loadData()', 'First file within 2 hours of next OR same day');
+                      end;
                     else
-                        obj.L.debug('ACFileLoader.loadData()', 'First file within 2 hours of next OR same day');
-                        
+                      obj.L.debug('ACFileLoader.loadData()', 'Only one file in temp');
                     end;
                 end;  % (1 < iFiles <= nGoodFiles)  && numFilesAdded >= 1 
 
