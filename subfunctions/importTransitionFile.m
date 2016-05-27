@@ -45,7 +45,7 @@ end
 
 %% Close the text file.
 fclose(fileID);
-
+clear fileID;
 %% Post processing for unimportable data.
 % No unimportable data rules were applied during the import, so no post
 % processing code is included. To generate code which works for
