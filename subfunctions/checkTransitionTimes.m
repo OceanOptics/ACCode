@@ -1,5 +1,5 @@
-function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
-    checkTransitionTimes( rawStartsIn, rawEndsIn, startFlagsIn, endFlagsIn, timestampsIn ) 
+function [ goodStartsOut, goodEndsOut ] = ...
+    checkTransitionTimes( rawStartsIn, rawEndsIn, timestampsIn ) 
 %CHECKTRANSTIONTIMES - This function matches a set of start and end
 %transition times.
 % If data starts with a transition end, it adds the first timestamp from
@@ -57,13 +57,15 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
     rawStartTimes = rawStartsIn;
     rawEndTimes = rawEndsIn;
     timestamps = timestampsIn;
-
-    % these are incoming flags that might have been set for a different reason
-    startFlags = startFlagsIn;
-    endFlags = endFlagsIn;
-
+    
     startsLength = length(rawStartTimes);
     endsLength = length(rawEndTimes);
+
+    % these are incoming flags that might have been set for a different reason
+    startFlags = ones(size(rawStartTimes));
+    endFlags = ones(size(rawStartTimes));
+
+
 
     % which is longer?
     if startsLength >= endsLength
@@ -136,7 +138,7 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
        % set up end Flags: same length as ends, copy over
        % changed 12/1/15
        tempEndFlags = zeros(length(goodEndFlags), 1);
-              L.debug('checkTransitionTimes', ...
+        L.debug('checkTransitionTimes', ...
            sprintf('size tempEndFlags: %u', size(tempEndFlags)));
        tempEndFlags(:,:) = NaN;
        tempEndFlags(1:length(endFlags),:) = endFlags(:,:);
@@ -168,7 +170,8 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
     else   % numEndsWithNoStarts > 1
 
        L.error('checkTransitionTimes', ...
-           'there should not be more than one end without a start');
+           'ERROR there should not be more than one end without a start - fix manually');
+       return;
     end;
 
     % for each good flagged start time, find the corresponding end
@@ -195,7 +198,7 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
     
     for iTempStart = 1:numTempStarts;
     L.debug('checkTransitionTimes', ...
-        sprintf('looping through tempStarts: %u:', iTempStart));
+        sprintf('looping through tempStarts: %u:', iTempStart))
                 
         % if this start is not nan - why would a start be nan?
         if ~isnan(tempStarts(iTempStart))
@@ -261,7 +264,7 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
 
               % if it's the last one, copy in last ts as end
               if (iTempStart == numTempStarts)
-%                   datestr(tempStarts(iTempStart))
+                  datestr(tempStarts(iTempStart))
                   
                   % <------- COPY IN DATA 2/3 -------------------------->
                   goodStarts(iGoodStart) = tempStarts(iTempStart);
@@ -363,11 +366,12 @@ function [ goodStartsOut, goodEndsOut, startFlagsOut, endFlagsOut ] = ...
            L.error('checkTransitionTimes', 'if tempStart is nan, why are we using?');
        end
    end   % for loop iStarts
+   
+   %% At this point, all starts/ends matched.
+   % Other checks
                    
-   %  assign out variables
-   goodStartsOut = goodStarts;
-   goodEndsOut = goodEnds;
-   startFlagsOut = goodStartFlags;
-   endFlagsOut = goodEndFlags;
+   %  assign out variables, only use good
+   goodStartsOut = goodStarts(goodStartFlags==1);
+   goodEndsOut = goodEnds(goodEndFlags==1);
              
 end   % end function
