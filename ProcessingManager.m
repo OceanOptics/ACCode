@@ -463,6 +463,39 @@ linkaxes([ax1,ax2,ax4], 'x');
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_temp_sal_gps_a')));
 saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_temp_sal_gps_a.jpg')));
 
+%% Plot temperature vs aTSW 735-701
+
+% find nearest wavlengths to 701 and 735
+wl735 = find( pd.meta.DeviceFile.aWavelengths >= 735, 1)
+wl701 = find( pd.meta.DeviceFile.aWavelengths >= 701, 1)
+
+figure(313)
+% Temperature Data
+
+ax1 = subplot(2,1,1);
+grid on;
+hold on;
+scatter(allData.TemperatureData.var.L3.BinnedTimestamps, allData.TemperatureData.var.L3.BinnedLabTempData, 'b')
+dynamicDateTicks;
+xlabel('Binned Timestamps');
+ylabel('Binned Temperature - C');
+legend('Binned Instrument Temperature Data')
+
+% ap Data
+ax2 = subplot(2,1,2);
+hold on;
+grid on;
+scatter(pd.var.aTSW.L3.binnedTime, (pd.var.aTSW.L3.median(:,77)- pd.var.aTSW.L3.median(:,67)))
+dynamicDateTicks;
+xlabel('Binned Timestamps');
+ylabel('aTSW binned: 735wl - 701wl');
+
+linkaxes([ax1,ax2], 'x');
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+    strcat(num2str(params.INGEST.YEAR_DAY), '_temp_vs_a735-701')));
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+    strcat(num2str(params.INGEST.YEAR_DAY), '_temp_vs_a735-701.jpg')));
+
 %%
 % Save file
 if params.RUN.SAVE_DATA

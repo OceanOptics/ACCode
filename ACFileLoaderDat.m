@@ -36,6 +36,9 @@
 % file, not the last iterated file.  I added a second iterator to keep
 % track of which files had been added as good,vs. which files had been
 % interated through.  -WN
+% June 2016 - Changed to fix discover that Compass Software was not naming 
+%           - as stated in documentation (i.e. filename reflects END time
+%           - of software, not START time.
 
 %------------- BEGIN CODE --------------
 %%
@@ -177,7 +180,19 @@ classdef ACFileLoaderDat
                 dateFromFileName = variablesFromFileName{1,2};
                 fileDate = datenum(dateFromFileName, 'yyyymmddHHMMSS');
                 
-                timestamps = fileDate + datenum(0,0,0,0,0, (timestampsMS - timestampsMS(1))/1000);
+                %------------------------------------------------------
+                %22Jun16:
+                % changed code to reflect issue with compass software
+                % realized filenames are not named according to the 
+                % beginning time of the datafile name, but rather, 
+                % the END of times in data file
+
+                % OLD CODE:
+                %timestamps = fileDate + datenum(0,0,0,0,0, (timestampsMS - timestampsMS(1))/1000);
+
+                % NEW CODE:
+                timestamps = fileDate - datenum(0,0,0,0,0, (timestampsMS(end) - timestampsMS)/1000);
+                %------------------------------------------------------
 
                 temp(iFiles).timestamps = timestamps;
                 temp(iFiles).fileName = fileName;

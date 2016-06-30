@@ -331,17 +331,17 @@ classdef ProcessedData < handle
             for iType1 = 1:length(dataType1)
                   for iType2 = 1:length(dataType2)
 
-                      obj.L.debug('ProcessedData.processBins', sprintf('type: %s', dataType1{iType1}));
-                      obj.L.debug('ProcessedData.processBins', sprintf('type: %s', dataType2{iType2}));
+                      obj.L.info('ProcessedData.processBins', sprintf('type: %s', dataType1{iType1}));
+                      obj.L.info('ProcessedData.processBins', sprintf('type: %s', dataType2{iType2}));
                       
                       thisType = sprintf('%s%s', dataType1{iType1}, dataType2{iType2});
             
                       [dataFlags, binFlags, binnedTime, numberBins, ...
                           binIndexNumbers, mean, median, sample_size, ....
                           std, variability, variance_over_mean, variability2, ...
-                          bin_uncertainty, bin_init_mean, bin_init_median] = ...
+                          bin_uncertainty, bin_init_mean] = ...
                           processFSWTSW( obj, obj.getVar('name', thisType), ...
-                          obj.meta.Params.PROCESS.BIN_SIZE );
+                          obj.meta.Params.PROCESS.BIN_SIZE, dataType1{iType1} );
 
                       if all(isnan(std))
                           obj.L.debug('ProcessBins', 'all std nan');
@@ -363,7 +363,7 @@ classdef ProcessedData < handle
                     obj.setVar( thisType, 'binned', 'variability2', variability2);
                     obj.setVar( thisType, 'binned', 'binUncertainty', bin_uncertainty);
                     obj.setVar( thisType, 'binned', 'initMean', bin_init_mean);
-                    obj.setVar( thisType, 'binned', 'initMedian', bin_init_median);
+%                     obj.setVar( thisType, 'binned', 'initMedian', bin_init_median);
                         
                   end   %for iType2
             end   %for iType1
@@ -375,8 +375,8 @@ classdef ProcessedData < handle
         function  [dataFlags, bin_flags, binned_time, numberBins, binIndexNumbers, ...
                 bin_data_mean, bin_data_median, bin_sample_size, ...
                 bin_data_std, bin_data_variability, bin_data_variance_over_mean, ...
-                bin_data_variability_2, bin_uncertainty, bin_init_mean, ...
-                bin_init_median] = processFSWTSW(obj, dataIn, binSizeIn )
+                bin_data_variability_2, bin_uncertainty, bin_init_mean] ...
+                = processFSWTSW(obj, dataIn, binSizeIn, typeIn )
         %#processFSW: actually processes BOTH FSW and TSW for a AND c  
         %#If no argsin are provided, it will process both a/c and TSW/FSW
         %#
@@ -421,8 +421,15 @@ classdef ProcessedData < handle
             LOWER_PERCENTILE = obj.meta.Params.PROCESS.LOWER_PERCENTILE;
             BIN_METHOD = obj.meta.Params.PROCESS.BIN_METHOD;
             N = obj.meta.Params.PROCESS.UNCERTAINTY_N;
-            % CHAGNED FOR NAAMES -- MISMATCH BETWEEN DEVICE FILE AND DATA
-%            numberWavelengths = obj.meta.numWavelengths;
+            
+            type = typeIn;
+            if strcmp(type, 'a')
+                stdThreshold = obj.meta.Params.PROCESS.a_STD_THRESH; %.015;
+            else
+                stdThreshold = obj.meta.Params.PROCESS.c_STD_THRESH; %.03;
+            end;
+            
+            % CHANGED FOR NAAMES -- MISMATCH BETWEEN DEVICE FILE AND DATA
             [rows,cols] = size(data);
             obj.L.debug('ProcessedData.processFSW',sprintf('size of data: %u x %u', rows, cols));
             numberWavelengths = cols;
@@ -478,9 +485,6 @@ classdef ProcessedData < handle
             
             bin_data_mean = zeros(numberBins, numberWavelengths);
             bin_data_mean(:,:) = NaN;
-
-            bin_init_median = zeros(numberBins, numberWavelengths);
-            bin_init_median(:,:) = NaN;
             
             bin_data_median = zeros(numberBins, numberWavelengths);
             bin_data_median(:,:) = NaN;
@@ -523,6 +527,9 @@ classdef ProcessedData < handle
                 [numRows, numCols] = size(thisBinData);
 
                 bin_sample_size(iBin,:) = numRows;
+                % moved up here 6/7/16
+                bin_init_mean(iBin,:) = nanmean(thisBinData, 1);
+                bin_data_variance_over_mean(iBin,:) = nanvar(thisBinData,1)./bin_init_mean(iBin,:);
 
                 % Set up the flags for this bin:
                 % One flag for this bin for EACH wavelength (1x83)
@@ -595,18 +602,9 @@ classdef ProcessedData < handle
 
                     bin_data_mean(iBin,:) = nanmean(thisBinPercCheckGood, 1);
                     bin_data_median(iBin,:) = nanmedian(thisBinPercCheckGood, 1);                    
-                    
-                    % make a copy of the initial mean and median
-                    % these will not be altered later
-                    bin_init_mean(iBin,:) = nanmean(thisBinPercCheckGood, 1);
-                    bin_init_median(iBin,:) = nanmedian(thisBinPercCheckGood, 1); 
-                    
                     bin_data_std(iBin,:) = nanstd(thisBinPercCheckGood, 1);
                     bin_data_variance(iBin,:) = nanvar(thisBinPercCheckGood,1);
-                    thisBinVar = bin_data_variance(iBin,:);
-                    thisBinMean = bin_data_mean(iBin,:);
-                    bin_data_variance_over_mean(iBin,:) = thisBinVar./thisBinMean;
-  
+ 
                     thisBinFinalPercentiles = prctile( thisBinPercCheckGood, [LOWER_PERCENTILE UPPER_PERCENTILE], 1);
 
                     for iCol = 1:numCols
@@ -621,17 +619,6 @@ classdef ProcessedData < handle
                     
                     % 3. BIN UNCERTAINTY
                     
-                    if strcmpi(BIN_METHOD, 'median')
-                        % use variability
-                        bin_uncertainty(iBin, :) = bin_data_variability(iBin,:)./sqrt(N);
-                    elseif strcmpi(BIN_METHOD, 'mean')
-                        % use STD 
-                        bin_uncertainty(iBin, :) = bin_data_std(iBin,:)./sqrt(N);
-                    else
-                        obj.L.error('ProcessedData.processFSW', 'Invalide bin method');
-                    end;
-                    
-                    
                     %------------------------------------------------------
                     % 4.  CHECK DATA & FLAG BIN
                     %     IF | median – mean| > (0.005m-1 + (0.05*median)) THEN Flag
@@ -639,61 +626,41 @@ classdef ProcessedData < handle
                     %     CONTINUE to use unflagged data
                     % -----------------------------------------------------
                     
-                    %IF | median – mean| > (0.00?1?m-1 + (0.0?1?*median)) THEN Flag
-                    
-% IF | median – mean| > max(0.001, 0.1*median)
+                    % IF | median – mean| > max(0.001, 0.1*median) FLAG
 
                     checkPartOne = abs(bin_data_median(iBin,:) - bin_data_mean(iBin,:));
-                    %changing this 7-apr-16 after naames crash
-%                     checkPartTwo = ( 0.005 + ( 0.05*abs(bin_data_median(iBin, :)) ) );
-                    % changed 5/17
-%                     checkPartTwo = ( 0.004 + ( 0.04*abs(bin_data_median(iBin, :)) ) );
-% Trying 5/20/16
                     checkPartTwo = max(0.001, 0.1*bin_data_median(iBin,:));
-                    thisBinMeanMedCheckFailIndex =  checkPartOne > checkPartTwo;
-                 
-                     if sum(sum(thisBinMeanMedCheckFailIndex)) == 0
-                        % if no bad bins - do nothing
-                        obj.L.debug('ProcessedData.processFSW', ...
-                            sprintf('No BAD data from mean median check for this bin: %u', iBin));  
-                    else
-                        % flag this bin as suspect
-%                         obj.L.debug('ProcessedData.processFSW', ...
-%                             sprintf('Yes, BAD data from mean median check for this bin: %u', iBin));                         
+                    thisBinMeanMedCheckFailIndex =  (checkPartOne > checkPartTwo);
+                    if sum(sum(thisBinMeanMedCheckFailIndex)) > 0
                         thisBinFlags(thisBinMeanMedCheckFailIndex) = 3;  % 1 == good
-                        
+                       
                         obj.L.debug('ProcessedData.processFSW', ...
-                            sprintf('Number of bad wls for this bin: %u', sum(thisBinMeanMedCheckFailIndex)));                          
+                            sprintf('%u bad wls for meanmed check', sum(thisBinMeanMedCheckFailIndex)));                          
                     end;
-
+    
+                    %% std threshold
+                    thisBinSTDCheckFailIndex = ...
+                        bin_data_std(iBin,:) > stdThreshold;
+              
+                    if sum(sum(thisBinSTDCheckFailIndex)) > 0                   
+                        thisBinFlags(thisBinSTDCheckFailIndex) = 3;  % 1 == good
+                        obj.L.debug('ProcessedData.processFSW', ...
+                            sprintf('%u bad wls for std check: %u', sum(thisBinSTDCheckFailIndex)));                          
+                    end; 
+%%
+                
                     % 6.  copy in final bin flag?
                     bin_flags(iBin,:) = thisBinFlags;
                     dataFlags(thisBinTimestampIndex,:) = thisBinDataFlags(:,:);
                     
                 else  %  ~all(all(isnan(thisBinData)))
-%                      obj.L.debug('ACData.processFSW', sprintf('Bin %u has no valid data', iBin));
+                     obj.L.debug('ACData.processFSW', sprintf('Bin %u has no valid data', iBin));
                 end   % end check for valid data
 
             end;    %for each bin
             numBadBins1 = sum(bin_flags==3,2);
-%             obj.L.info('processFSW', sprintf('flagged %u bad bins', sum(numBadBins1)));
             obj.L.info('processFSW', sprintf('flagged %u bad spectra', sum(numBadBins1 > 0)));
 
-            % 5.  Check STD & flag those below as '3'
-            threshold_data = zeros(size(bin_data_std));
-            threshold_data(:,:) = NaN;
-            good_bin_index = bin_flags ~=3;
-            threshold_data(good_bin_index) = bin_data_std(good_bin_index);
-%             threshold = 2*prctile(bin_data_std, 68, 1);
-threshold = 2*prctile(threshold_data, 68, 1);
-
-%             dataAboveThreshold(:,:) = bsxfun(@gt, bin_data_std(:,:), threshold(:,:));
-dataAboveThreshold(:,:) = bsxfun(@gt, threshold_data(:,:), threshold(:,:));
-
-            badBins(:,:) = any(dataAboveThreshold == 1, 2); %& ~zeroBecauseNans
-            bin_flags(badBins,:) = 3;
-            numBadBins = sum(badBins==1);
-            obj.L.info('processFSW', sprintf('flagged %u bad bins', numBadBins));
             obj.L.info('processFSW','End of Method');           
         end   %#processFSW
 
@@ -740,12 +707,13 @@ dataAboveThreshold(:,:) = bsxfun(@gt, threshold_data(:,:), threshold(:,:));
             for iType1 = 1:length(dataType1)
                   for iType2 = 1:length(dataType2)
 
-                      obj.L.debug('ProcessedData.removeSuspectBins', sprintf('type: %s', dataType1{iType1}));
-                      obj.L.debug('ProcessedData.removeSuspectBins', sprintf('type: %s', dataType2{iType2}));
+                      obj.L.debug('ProcessedData.removeSuspectBins', ...
+                          sprintf('type: %s', dataType1{iType1}));
+                      obj.L.debug('ProcessedData.removeSuspectBins', ...
+                          sprintf('type: %s', dataType2{iType2}));
                       
                         thisType = sprintf('%s%s', dataType1{iType1}, dataType2{iType2});
                         binMethod = obj.meta.Params.PROCESS.BIN_METHOD;
-% filtered_bins = obj.getVar('name', thisType, 'level', 'binned', 'data', binMethod);   %1502x83
 
                         % FIRST, make copy of suspect bins
                         
@@ -760,38 +728,27 @@ dataAboveThreshold(:,:) = bsxfun(@gt, threshold_data(:,:), threshold(:,:));
                         
                         % apply index to fields
                         allBinsMedian = obj.getVar('name',thisType, 'level', 'binned', 'data', 'median');
-%                         obj.var.(thisType).L3.suspectBins = zeros(size(obj.var.(thisType).L3.(binMethod)));
                         suspectMedian = zeros(size(allBinsMedian));
                         suspectMedian(:) = NaN;
-                        suspectMedian(suspectBinMatrixIndex) = ...
-                            allBinsMedian(suspectBinMatrixIndex);
+                        suspectMedian(suspectBinIndex,:) = allBinsMedian(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectMedian', suspectMedian);
-
-                    
-%                     obj.setVar( thisType, 'binned', 'dataFlags', dataFlags);
-%                     obj.setVar( thisType, 'binned', 'binFlags', binFlags);
-%                     obj.setVar( thisType, 'binned', 'numberBins', numberBins);
-%                     obj.setVar( thisType, 'binned', 'binIndexNumbers', binIndexNumbers);
-
-
-%                     obj.setVar( thisType, 'binned', 'initMean', bin_init_mean);
-%                     obj.setVar( thisType, 'binned', 'initMedian', bin_init_median);   
-                    
+ 
                         allTime = obj.getVar('name', thisType, 'level', 'binned', 'data', 'binnedTime');
+                        [r,c] = size(allTime);
+                        if r<c
+                            allTime = allTime';
+                        end;
                         suspectTime = zeros(size(allTime));
                         suspectTime(:) = NaN;
-                        suspectTime(suspectBinMatrixIndex(:,1)) = ...
-                            allTime(suspectBinMatrixIndex(:,1));
+                        suspectTime(suspectBinIndex,:) = allTime(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectTime', suspectTime);
                         
-%                         obj.setVar( thisType, 'binned', 'binnedTime', binnedTime);
-
-                        
+                       
                         allBinsMean = obj.getVar('name', thisType, 'level', 'binned', 'data', 'mean');
                         suspectMean = zeros(size(allBinsMean));
                         suspectMean(:) = NaN;
-                        suspectMean(suspectBinMatrixIndex) = ...
-                            allBinsMean(suspectBinMatrixIndex);
+                        suspectMean(suspectBinIndex,:) = ...
+                            allBinsMean(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectMean', suspectMean);
 
 
@@ -799,50 +756,54 @@ dataAboveThreshold(:,:) = bsxfun(@gt, threshold_data(:,:), threshold(:,:));
                             'level', 'binned', 'data', 'sample_size');
                         suspectSampleSize = zeros(size(allBinsSampleSize));
                         suspectSampleSize(:) = NaN;
-                        suspectSampleSize(suspectBinMatrixIndex) = ...
-                            allBinsSampleSize(suspectBinMatrixIndex);
+                        suspectSampleSize(suspectBinIndex,:) = ...
+                            allBinsSampleSize(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectSampleSize', suspectSampleSize);
 
 
-                       
                         allBinsSTD = obj.getVar('name', thisType, ...
                             'level', 'binned', 'data', 'std');
                         suspectSTD = zeros(size(allBinsSTD));
                         suspectSTD(:) = NaN;
-                        suspectSTD(suspectBinMatrixIndex) = allBinsSTD(suspectBinMatrixIndex);
+                        suspectSTD(suspectBinIndex,:) = allBinsSTD(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectSTD', suspectSTD);
 
+                        
                         allBinsVariability = obj.getVar('name', thisType, ...
                             'level', 'binned', 'data', 'variability');
                         suspectVariability  = zeros(size(allBinsVariability ));
                         suspectVariability (:) = NaN;
-                        suspectVariability (suspectBinMatrixIndex) = ...
-                            allBinsVariability (suspectBinMatrixIndex);
+                        suspectVariability(suspectBinIndex,:) = ...
+                            allBinsVariability(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectVariability', suspectVariability);
-                      
+ 
+                        
                         allBinsVariability2 = obj.getVar('name', thisType, ...
                             'level', 'binned', 'data', 'variability2');
                         suspectVariability2  = zeros(size(allBinsVariability2 ));
                         suspectVariability2 (:) = NaN;
-                        suspectVariability2 (suspectBinMatrixIndex) = ...
-                            allBinsVariability2 (suspectBinMatrixIndex);
+                        suspectVariability2(suspectBinIndex,:) = ...
+                            allBinsVariability2(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectVariability2', suspectVariability2);
  
+                        
                         allBinsVarianceOverMean = obj.getVar('name', thisType, ...
                             'level', 'binned', 'data', 'variability2');
                         suspectVarianceOverMean  = zeros(size(allBinsVarianceOverMean ));
                         suspectVarianceOverMean (:) = NaN;
-                        suspectVarianceOverMean (suspectBinMatrixIndex) = ...
-                            allBinsVarianceOverMean (suspectBinMatrixIndex);
+                        suspectVarianceOverMean(suspectBinIndex,:) = ...
+                            allBinsVarianceOverMean(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectVarianceOverMean', suspectVarianceOverMean);                        
  
+                        
                         allBinsbinUncertainty = obj.getVar('name', thisType, ...
                             'level', 'binned', 'data', 'binUncertainty');
                         suspectbinUncertainty  = zeros(size(allBinsbinUncertainty ));
                         suspectbinUncertainty (:) = NaN;
-                        suspectbinUncertainty(suspectBinMatrixIndex) = ...
-                            allBinsbinUncertainty(suspectBinMatrixIndex);
+                        suspectbinUncertainty(suspectBinIndex,:)= ...
+                            allBinsbinUncertainty(suspectBinIndex,:);
                         obj.setVar( thisType, 'binned', 'suspectbinUncertainty', suspectbinUncertainty);   
+
                         
                         if obj.meta.Params.PROCESS.USE_SUSPECT_BINS 
                          obj.L.info('ProcessedData.removeSuspectBins', ...
@@ -2014,6 +1975,7 @@ dataAboveThreshold(:,:) = bsxfun(@gt, threshold_data(:,:), threshold(:,:));
             dynamicDateTicks;
             linkaxes([ax1, ax2], 'x')
         end
+        
         
         function plotACInterpolatedData(obj, fignum, wavelengthToPlot)
             figure(fignum);

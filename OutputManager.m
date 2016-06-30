@@ -18,6 +18,7 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 4-Mar-16
+% June 2016 - added bin_count and units to output files.
 % 
 
 %----------------------------- BEGIN CODE ---------------------------------
@@ -252,9 +253,17 @@ for iData = 1:length(data_type)
     westLon = min(data_to_print(:,2));
     
     % create list of units, get rid of last ','
-    apcp_units = char(repmat(uint8(strcat(params.INGEST.AC_UNITS, ',')), 1, 2*(length(wavelengths))));
-    apcp_units(length(apcp_units)) = '';
+    apcp_units = char(repmat(uint8(strcat(params.INGEST.AC_UNITS, ',')),...
+        1, 2*(length(wavelengths))));
+    % create units for bin_count
+    bin_units = char(repmat(uint8(strcat('none',',')),...
+        1, 2*(length(wavelengths))));
+    units_to_print = strcat(apcp_units, bin_units);
 
+    units_to_print(length(units_to_print)) = '';
+
+
+    
     % build the extension name from the dataFile
     extension = strcat(thisFileName, '.txt');
     seabassFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(sb_fname_ascii, extension));
@@ -313,7 +322,7 @@ for iData = 1:length(data_type)
             end;
         end
         fprintf(fid,'\n');
-        fprintf(fid,['/units=yyyymmdd,hh:mm:ss,degrees,degrees,degreesC,PSU,' apcp_units '\n']);
+        fprintf(fid,['/units=yyyymmdd,hh:mm:ss,degrees,degrees,degreesC,PSU,' units_to_print '\n']);
         fprintf(fid,'/end_header\n');
 
         % ----------------------------------------------------------------------

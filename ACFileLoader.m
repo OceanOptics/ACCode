@@ -29,6 +29,9 @@
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 13-08-15
 % May 2016 - Added ability to run from OSX
+% June 2016 - Changed to fix discover that Compass Software was not naming 
+%           - as stated in documentation (i.e. filename reflects END time
+%           - of software, not START time.
 
 %------------- BEGIN CODE --------------
 classdef ACFileLoader
@@ -157,7 +160,6 @@ classdef ACFileLoader
                 
                 % open the data file and retrieve data from it
                 fh = str2func(obj.ImportMethodName);
-%                 origDataMatrix = fh(obj.OutputLocation);
                 origDataMatrix = fh(prepacs_output_filename);
                 
                 % -------------------------------------------------------            
@@ -200,8 +202,20 @@ classdef ACFileLoader
                     dateFromFileName = variablesFromFileName{1,2};
                     fileDate = datenum(dateFromFileName, 'yyyymmddHHMMSS');
 
-                    timestamps = fileDate + datenum(0,0,0,0,0, (timestampsMS - timestampsMS(1))/1000);
+                    %------------------------------------------------------
+                    %22Jun16:
+                    % changed code to reflect issue with compass software
+                    % realized filenames are not named according to the 
+                    % beginning time of the datafile name, but rather, 
+                    % the END of times in data file
+                    
+                    % OLD CODE:
+                    %timestamps = fileDate + datenum(0,0,0,0,0, (timestampsMS - timestampsMS(1))/1000);
 
+                    % NEW CODE:
+                    timestamps = fileDate - datenum(0,0,0,0,0, ...
+                        (timestampsMS(end) - timestampsMS)/1000);
+                    %------------------------------------------------------
                     temp(nFilesWithGoodData).timestamps = timestamps;
                     temp(nFilesWithGoodData).fileName = fileName;
                     temp(nFilesWithGoodData).cRawDataMatrix = cRawDataMatrix;
