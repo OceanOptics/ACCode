@@ -130,7 +130,8 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                       
                     % equation 6 from Slade paper
                     % minimization routine
-                    [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
+                    [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, ...
+                        opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
 
                     % equation 5 from Slade paper
                     % combines temperature and scattering correction    
@@ -177,7 +178,7 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                     %[deltaT(k), fiterr(k)] = fminsearch(@f_TS_Rottgers, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);    
 
                     % old 2/28
-                    %                     [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
+                    % [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
                     
 %                     a715 = 0.212*(ap_uncorr(ref)^1.135);
 % old 2/28
@@ -185,15 +186,21 @@ function [ap_TSalScatCorr, ap_uncorr_ref, fiterr, deltaT] = ResidTempScatCorr(ap
                     
                     [deltaT(k), fiterr(k)] = fminsearch(@f_TS_Slade, 0, ...
                         opts, ap_uncorr(k,:), cp(k,:), psiT, NIR, ref);
-
-                    a715 = 0.212*((ap_uncorr(k,ref)-psiT*deltaT(k)).^1.135);
-                    
+% this was not calling psiT(ref)
+% * changed july 2016
+                    a715 = 0.212*((ap_uncorr(k,ref)-psiT(ref)*deltaT(k)).^1.135);
+                
                     ec = 0.56;
+                   
                     
-                    ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - (ap_uncorr(k,ref) - a715).* ...
-                        ( (ec^-1*cp(k,:) - ap_uncorr(k,:) ) ./ (ec^-1*cp(k,ref) - a715))...
-                        - psiT.*deltaT(k);
+%                     ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - (ap_uncorr(k,ref) - a715).* ...
+%                         ( (ec^-1*cp(k,:) - ap_uncorr(k,:) ) ./ (ec^-1*cp(k,ref) - a715))...
+%                         - psiT.*deltaT(k);
 
+                ap_TSalScatCorr(k,:) = ap_uncorr(k,:) - (ap_uncorr(k,ref)-psiT(ref)*deltaT(k) - a715).* ...
+                        ( (ec^-1*(cp(k,:)-psiT.*deltaT(k)) - (ap_uncorr(k,:)-psiT.*deltaT(k)) ) ./ ...
+                        (ec^-1*(cp(k,ref) - psiT(ref)*deltaT(k)) - a715))...
+                        - psiT.*deltaT(k);
 
                 elseif FLAT
                     L.debug('ResidTempScatCorr', 'FLAT');

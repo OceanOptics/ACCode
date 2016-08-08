@@ -181,12 +181,6 @@ classdef ACFileLoader
 
                     timestampsMS = dataMatrix(:,1);
 
-                    obj.L.debug('ACFileLoader.loadData()', ...
-                        sprintf('timestampsMS start %s', datestr(timestampsMS(1), 'HH:MM:SS:FFF')));
-
-                    obj.L.debug('ACFileLoader.loadData()', ...
-                        sprintf('timestampsMS end %s', datestr(timestampsMS(end), 'HH:MM:SS:FFF')));
-
                     endCat = obj.numWL+1;
                     cRawDataMatrix = dataMatrix(:,2:endCat);
                     startAat = endCat+1;
@@ -273,8 +267,8 @@ classdef ACFileLoader
                             obj.L.debug('ACFileLoader.loadData()', ...
                                 'this file''s last TS AFTER end of last added files''s last TS but there must be some overlap on beginning');
 
-                                % find nearest last prev ts in this file, skip
-                                % overlapping records
+                            % find nearest last prev ts in this file, skip
+                            % overlapping records
                             obj.L.debug('ACFileLoader.loadData()', ...
                                 sprintf('previous end time: %s', datestr(lastFileAddedLastTS)));
                                 
@@ -300,12 +294,9 @@ classdef ACFileLoader
                         obj.L.debug('ACFileLoader.loadData()', ...
                             sprintf('prev file last ts: %s', ...
                             datestr(lastFileAddedLastTS, 'YY-mm-DD HH:MM:SS:FFF')));
-%                                 sprintf('prev file last ts: %s', datestr(temp(iFiles - 1).timestamps(end), 'YY-mm-DD HH:MM:SS:FFF')));
                         obj.L.debug('ACFileLoader.loadData()', ...
                             sprintf('this file first ts: %s', ...
                             datestr(thisFilesFirstTS, 'YY-mm-DD HH:MM:SS:FFF')));
-%                                 sprintf('this file first ts: %s', datestr(temp(iFiles).timestamps(1), 'YY-mm-DD HH:MM:SS:FFF')));
-
                     end;   % end check if last timestamp of previous file after first time stamp of this file
                     if iFiles == nGoodFiles  % last file to be added
                         % check this last file isn't more than 2 hours past
@@ -349,7 +340,6 @@ classdef ACFileLoader
                 obj.L.debug('ACFileLoader.loadData()', 'should be ok to add file');
                 
                 % update 'lastFileAdded' timestamps
-                lastFileAddedFirstTS = thisFilesFirstTS;
                 lastFileAddedLastTS = thisFilesLastTS;
                 numFilesAdded = numFilesAdded + 1;
                 

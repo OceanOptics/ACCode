@@ -70,10 +70,6 @@ flowFiles = getFilesNextPrev(params.INGEST.FLOW_DIRECTORY, flowcurr, flownext, f
 if size(flowFiles) >= 1
     ffl = FlowFileLoader(flowFiles, params.INGEST.FLOW_IMPORT_METHOD_NAME, 'flow', params.INGEST.FLOW_UNITS, 'valve', params.INGEST.VALVE_UNITS );
     flowData = ffl.loadData();
-%     params.INGEST.FLOW_EXISTS = true;
-else
-    % no flow files!
-%     params.INGEST.FLOW_EXISTS = false;
 end;
 
 %%

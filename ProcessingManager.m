@@ -38,7 +38,7 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 13-08-15
-% 
+% July 2016 - moved qa/qc to after unsmoothing
 
 %----------------------------- BEGIN CODE ---------------------------------
 %%Load data file from disk
@@ -127,83 +127,59 @@ pd.setVar('cTSW', 'preprocessed', 'timestamps', rawCT); %allData.cData.SyncDataO
 pd.setVar('cFSW', 'preprocessed', 'data', cFSW);
 pd.setVar('cFSW', 'preprocessed', 'timestamps', rawCT); %allData.cData.SyncDataObject.Time );
 varlist = {'aTSW','rawAT','aFSW','cTSW','cFSW','rawCT'};
+
+[r, ~] = size(rawAT);
+if r > 0 % a data exists
+    pd.aExists = true;
+else
+    pd.aExists = false;
+end;
+[r, ~] = size(rawCT);
+if r > 0 % c data exists
+    pd.cExists = true;
+else
+    pd.cExists = false;
+end;
 clear(varlist{:})
 
-pd.aExists = true;
-pd.cExists = true;
-
-%% ------------------------------------------------------------------------
-% STEP 1A: PROCESS FILTERED DATA (FSW): CREATES LEVEL L3 (BINNED) DATA
-% STEP 1A: PROCESS 'TOTAL' DATA (TSW)
-% -------------------------------------------------------------------------
-% 
-% 1.  Bin it
-% for each filtered period
-% create minute bins
-% find data between 2.5 and 97.5%
-% flag data outside these as suspect
-% calculate median and mean for rest
-% if | median - mean | > (0.0005 + (0.05*median))
-%   then flag
-% rebin unflagged data to 1 minute
-% calculate mean, median, std
-% calculate percentiles
-
-% CREATE MINUTE BINS (total and filtered)
-pd.processBins();
-
-% calculate suspect data
-pd.removeSuspectBins();
-% pd.calcSuspectFSWData()
-% pd.calcSuspectFSWData();
-
-% PLOT
-% NEED NOTE HERE ABOUT WHAT IS BEING PLOTTED
-% THESE ARE DEBUG PLOTS
-% if params.RUN.CREATE_DEBUG_PLOTS
+% make sure directory exists for output plots, data files
 if ~exist(params.INGEST.DATA_OUTPUT_DIRECTORY, 'dir')
     mkdir(params.INGEST.DATA_OUTPUT_DIRECTORY)
     L.info('ProcessingManager','made new directory for output');
 end;
-pd.plotFSWSuspectData(31, 20);
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR_DAY), '_FSW_rejects')));
-pd.plotTSWSuspectData(32, 20);
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR_DAY), '_TSW_rejects')));
 
-% end;
+%% ------------------------------------------------------------------------
+% STEP 1A: PROCESS 'FILTERED' (FSW) AND 'TOTAL' DATA (TSW): 
+% CREATES LEVEL L3 (BINNED) DATA for FSW, TSW (a & c)
+% -------------------------------------------------------------------------
+% 
+% 1.  CREATE MINUTE BINS (total and filtered)
+pd.processBins();
+pd.calcTSWUncertainty();
+
 % ------------------------------------------------------------------------ 
-% STEP 2: Get Filtered Spectra (INTERPOLATE): CREATES LEVEL L4 (FILTERED)
-% DATA
+% STEP 2: Get Filtered Spectra (INTERPOLATE): 
+% CREATES LEVEL L4 (FILTERED) DATA for FSW (a & c)
 % -------------------------------------------------------------------------
 %  Interpolate between dissolved spectra using linear interpolation
 %  Calculate STD for interpolated bins by finding (RANGE of start and end
 %  filter bins/2)
-
-% STEP 2A: INTERPOLATE BETWEEN DISSOLVED USING LINEAR INTERPOLATION
-%
-% STEP 2B: CALCULATE UNCERTAINTY for INTERPOLATED BINS
-%
-% This is (MAX - MIN)/2
+% STEP 2A: FIND MEDIANS OF EACH SECTION OF FSW BINS
 pd.findFSWBinMedians();
+% STEP 2B: INTERPOLATE BETWEEN DISSOLVED USING LINEAR INTERPOLATION
+% STEP 2C: CALCULATE UNCERTAINTY for INTERPOLATED BINS
 pd.interpolateFiltered();
 
 %%  Plot Data
-%THIS IS DEBUG PLOT
-pd.plotACInterpolatedData(33, 20);
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
-    strcat(num2str(params.INGEST.YEAR_DAY), '_filt_spec_median')));
-
+if params.RUN.CREATE_DEBUG_PLOTS
+    pd.plotACInterpolatedData(33, 20);
+    saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+        strcat(num2str(params.INGEST.YEAR_DAY), '_filt_spec_median')));
+end;
 %% ------------------------------------------------------------------------
 % STEP 3: CALCULATE PARTICULATE: CREATES LEVEL L5: PARTICULATE
 % STEP 4: COMPUTE NEW UNCERTAINTY FOR P
-%
-% % Subtract filtered measurements (FROM TOM)
-% bin_cp = bin_rawc - cgi;
-% bin_ap_uncorr = bin_rawa - agi;
-
-% have cTSW and cFSW
+% -------------------------------------------------------------------------
 pd.calcParticulate();
 
 % check ap & cp timestamps are the same, otherwise make the same
@@ -258,40 +234,31 @@ if params.RUN.CREATE_DEBUG_PLOTS
 end;
 
 
-%% STEP 5&6: REMOVE WAVELENGTHS OVER 750 & INTERPOLATE A 750 wl of data
-
-if pd.cExists == true
-    pd.removeWLAfter750('c');
-else
-    if pd.aExists == true
-        % WHY DID I COMMENT THIS OUT?
-%       pd.removeWLAfter750('a');
-    else
-        L.error('ProcessingManager', 'aExists and cExists both false');
-    end;
-end;
-
-
-
-%% STEP 7: Correct mismatch in spectral band positions between a and c 
+%% ------------------------------------------------------------------------
+% STEP 5 - 7: 
+% STEP 5: REMOVE WAVELENGTHS OVER 750
+% STEP 6: INTERPOLATE A 750 wl of data
+% STEP 7: Correct mismatch in spectral band positions between a and c 
 % Only can match the wavelengths, if we have both a and c data
 % a will be interpolated to c wavelengths
-
-% also outputs ag and cg
+% -------------------------------------------------------------------------
 if pd.cExists == true
     if pd.aExists == true
         L.debug('ProcessingManager', 'cExists == true; aExists == true');
         pd.correctSpectralBandMismatch('c');
     else
         L.debug('ProcessingManager', 'cExists == true; aExists == false');
+        L.error('ProcessingManager', 'CODE NOT COMPLETED FOR c BUT NO a');
     end;
 else
     L.debug('ProcessingManager', 'cExists == false');
+    L.error('ProcessingManager', 'CODE NOT COMPLETED FOR a BUT NO c');
 end;
     
 
-%% Step 8: Scattering/Residual Temperature Correction
-
+%% ------------------------------------------------------------------------
+% Step 8: Scattering/Residual Temperature Correction
+% -------------------------------------------------------------------------
 if pd.cExists == true
     if pd.aExists == true
         L.debug('ProcessingManager', 'cExists == true; aExists == true');
@@ -328,51 +295,23 @@ if pd.cExists == true
         pd.attenuationCorr('WITHA');
         
         if params.RUN.CREATE_DEBUG_PLOTS
-            tsToUse = find( ~isnan(pd.var.cp.L8.data(:,1)), 1, 'first');
-
-            figure(39)
-            hold on; 
-            grid on;
-            plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), '*b')
-            plot( pd.var.cp.L7.wavelengths, pd.var.cp.L7.data(tsToUse,:), '*c')
-            legend('corrected cp', 'uncorrected cp')
-            title('correcting c using a')
+            pd.plotCpCorrVsUncorr( 39 );
         end;
-         
     else
-        
-        % DO NOT THINK THIS IS WORKING
-        
         L.debug('ProcessingManager', 'cExists == true; aExists == false');
+        % UNTESTED
         pd.attenuationCorr('WITHOUTA');
         
-        tsToUse = find( ~isnan(pd.var.cp.L9.data(:,1)), 1, 'first');
         if params.RUN.CREATE_DEBUG_PLOTS
-            figure(39)
-            hold on; 
-            grid on;
-            plot( pd.var.cp.L9.wavelengths, pd.var.cp.L9.data(tsToUse,:), '*b')
-            plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), '*c')
-            legend('corrected cp', 'uncorrected cp')
-            title('correcting c without using a')
-
-            figure(310)
-            hold on; 
-            grid on;
-            plot( pd.var.cp.L9.wavelengths, pd.var.cp.L9.data(tsToUse,:), 'b')
-            plot( pd.var.cp.L8.wavelengths, pd.var.cp.L8.data(tsToUse,:), 'c')
-            legend('corrected cp', 'uncorrected cp')
-            title('correcting c without using a')
+            pd.plotCpCorrVsUncorr( 39 );
         end;
     end;
 else
     L.debug('ProcessingManager', 'no attenuation correction - no c data');
 end;
-% pd.attenuationCorr('WITHA');
-%%  STEP 10: CALCULATE FINAL UNCERTAINTY FOR ap
 
-% for ap:
-% uncertainty in processing
+%%  STEP 10: CALCULATE FINAL UNCERTAINTY FOR ap
+% Determines uncertainty in processing
 
 pd.computeAPUncertaintyBetweenCorrections();
 
@@ -387,7 +326,7 @@ if params.PROCESS.UNSMOOTH_DATA
 
         % DEBUG PLOT TO CHECK
         atsToUse = find( ~isnan(pd.var.ap.L8.data_slade(:,1)), 1, 'first');
-        ctsToUse = find( ~isnan(pd.var.cp.L9.data(:,1)), 1, 'first');
+        ctsToUse = find( ~isnan(pd.var.cp.L7.data(:,1)), 1, 'first');
         pd.plotUnsmoothVsSmooth(311, atsToUse, ctsToUse);
         
     end;
@@ -395,14 +334,21 @@ else
     L.info('ProcessingManager', 'Not doing unsmoothing');
 end;
 
+%% STEP XX: QA/QC
 
+pd.flagSuspectBins();
+pd.removeSuspectBins();
+pd.plotSuspectData(31, 20);
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
+    strcat(num2str(params.INGEST.YEAR_DAY), '_rejects')));
+
+pd.plotApWithoutSuspectData(32,'slade');
+pd.plotCpWithoutSuspectData(33);
 %% STEP 12: Bin TSG data
 
 tData = allData.TemperatureData.DataObject.Data(:,1);
 tTime = allData.TemperatureData.DataObject.Time;
 
-% THIS HAS TO BE CHANGED:
-% WHAT WAS THIS NOTE FOR??  BECAUSE i WAS CALLING THE DATA EXPLICITLY?
 if pd.cExists == true
     acTime = pd.var.cp.L5.timestamps;
 elseif pd.aExists == true
@@ -466,8 +412,8 @@ saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params
 %% Plot temperature vs aTSW 735-701
 
 % find nearest wavlengths to 701 and 735
-wl735 = find( pd.meta.DeviceFile.aWavelengths >= 735, 1)
-wl701 = find( pd.meta.DeviceFile.aWavelengths >= 701, 1)
+wl735 = find( pd.meta.DeviceFile.aWavelengths >= 735, 1);
+wl701 = find( pd.meta.DeviceFile.aWavelengths >= 701, 1);
 
 figure(313)
 % Temperature Data
@@ -532,6 +478,7 @@ if params.INGEST.CLEAR_VARS
     clear ctsToUse;
     clear matFileName;
     clear matFileName2;
+    clear r;
     clear rawA;
     clear rawAT;
     clear rawC;
@@ -540,4 +487,6 @@ if params.INGEST.CLEAR_VARS
     clear tsToUse;
     clear tTime;
     clear varlist;
+    clear wl701;
+    clear wl735;
 end;

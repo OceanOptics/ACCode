@@ -27,7 +27,7 @@
 % clear classes;
 
 % load the configuration variables set in the .ini file
-params = ini2struct('NAAMES_accode.ini');
+params = ini2struct('NAAMES01_accode.ini');
 % get year days from params. params will be overwritten by other files.
 
 daysToRun = params.RUN.YEAR_DAYS;

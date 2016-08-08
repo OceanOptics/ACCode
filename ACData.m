@@ -226,7 +226,7 @@ classdef ACData < AncillaryInlineData
         %% ----------------------------------------------------------------
         % setGoodTransitions
         % -----------------------------------------------------------------
-        function setGoodTransitions(obj, goodStarts, goodEnds, type)
+        function setGoodTransitions(obj, goodStarts, goodEnds, type, level)
             
             name = strcat(type, 'transitions');
             goodStarts = goodStarts(~isnan(goodStarts));
@@ -244,7 +244,7 @@ classdef ACData < AncillaryInlineData
             transitions.StartData = goodStartData;
             transitions.EndData = goodEndData;
 
-            obj.setVar( 'TSW', 'preprocessed', name, transitions );
+            obj.setVar( 'TSW', level, name, transitions );
        
         end
        
@@ -260,16 +260,13 @@ classdef ACData < AncillaryInlineData
             Transitions = obj.getTransitions('preprocessed');
             goodTrans = Transitions.FSWTransitions.StartTime;
             
-%             goodTrans = obj.GoodFSWStartTimes;
             obj.L.debug('ACData.syncTo', ...
                 sprintf('first good transition in FSW: %s', datestr(goodTrans(1))));
             
             if length(goodTrans) >= 1 
                 obj.L.debug('ACData.syncTo', 'at least one goodTrans');
                 dataInGood = AncillaryDataIn.TransStartTime(AncillaryDataIn.TransStartFlag == 1);
-%                 dataInGood
                 [~,ind1] = min(abs(datenum(dataInGood) - datenum(goodTrans(1))));
-%                 ind1
                 closestGoodTime = dataInGood(ind1,:);
                 obj.L.debug('ACData.syncTo', ...
                     sprintf('closestGoodTime from ancillary: %s', datestr(closestGoodTime)));
@@ -285,7 +282,6 @@ classdef ACData < AncillaryInlineData
                     sprintf('original data object start time: %s, end time: %s', ...
                     datestr(obj.DataObject.Time(1)), datestr(obj.DataObject.Time(end))));
                 
-%                 obj.setVar( 'TSW', 'preprocessed', name, transitions );                
                 obj.SyncDataObject = obj.DataObject; 
                 obj.SyncDataObject.Time = obj.SyncDataObject.Time + offset;
                 
@@ -344,18 +340,15 @@ classdef ACData < AncillaryInlineData
                     sprintf('temp start time: %s', datestr(tempStartTime)));  
                 
                 %   find index of new start time
-%               [~,ind1] = min(abs(datenum(dataInGood) - datenum(goodTrans(1) )));
                 [~,ind1] = min(abs(datenum(obj.SyncDataObject.Time) - datenum( tempStartTime )));
 
                 %   reasssign startData with correct time and data
                 Transitions.FSWtransitions.StartTime(iStartTime) = ...
                     obj.SyncDataObject.Time(ind1,:);
-%                 startTimes(iStartTime) = obj.SyncDataObject.Time(ind1,:); 
                 
                 % just use col 20 here -- that's what orig running med used
                 Transitions.FSWtransitions.StartData(iStartTime) = ...
                     obj.SyncDataObject.Data(ind1,20);                
-%                 obj.GoodFSWStartData(iStartTime) = obj.SyncDataObject.Data(ind1,20);
 
             end   % end for loop
           obj.setVar( 'TSW', 'preprocessed', 'TSWtransitions', ...
@@ -486,7 +479,6 @@ classdef ACData < AncillaryInlineData
         function plotRunningMeds(obj)
             hold on
             grid on
-%             plot(obj.DataObject.Time, obj.SmoothData(:,20))
             plot(obj.DataObject.Time, obj.runningFSWmedian, 'y*')
             plot(obj.DataObject.Time, obj.runningTSWmedian, 'c*')
             legend(obj.Name, 'running FSW median', 'running TSW median');
@@ -496,7 +488,6 @@ classdef ACData < AncillaryInlineData
            
         end
         function plotInitFSWTransitions(obj)
-%             plot( obj.DataObject.Time, obj.DataObject.Data(:,20) )
              hold on
              grid on
              dynamicDateTicks;
@@ -512,7 +503,6 @@ classdef ACData < AncillaryInlineData
              hold on
              grid on
              dynamicDateTicks;
-%             legend(obj.Name, 'starts', 'ends')
              transitions = obj.getVar('name', 'TSW', 'level', ...
                  'raw', 'data', 'TSWtransitions');
              plot(transitions.StartTime, transitions.StartData, 'yo', ...
@@ -531,9 +521,6 @@ classdef ACData < AncillaryInlineData
             for i=1:length(obj.TransEndTime)
                 line([obj.TransEndTime(i) obj.TransEndTime(i)], [0 2], 'color', 'red')
             end
-%             xlabel('timestamp')
-%             ylabel(obj.Name)
-%             legend(obj.Name, 'FSW start' , 'FSW end')
         end
         
         function plotFSWSuspectTransitions(obj)
@@ -558,7 +545,6 @@ classdef ACData < AncillaryInlineData
                 'gd','MarkerEdgeColor','k','MarkerFaceColor', 'green', 'MarkerSize',5);
             plot(transitions.EndTime, transitions.EndData, ...
                  'cd', 'MarkerEdgeColor','k','MarkerFaceColor', 'cyan' ,'MarkerSize',5);
-%              legend('good start', 'good end')
         end
         
         

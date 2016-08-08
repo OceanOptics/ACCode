@@ -30,9 +30,10 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 13-08-15
+% July/August 2016 - major revision in way transitions are managed
 
 %--------------------------------- BEGIN CODE -----------------------------
-
+%% Load data file from disk
 matFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, params.INGEST.DATA_OUTPUT_FILE);
 paramsFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, 'params');
 
@@ -45,11 +46,7 @@ end;
 clear matFileName;
 
 
-%% Load data file from disk
-% Set to TRUE if opening raw data file from disk
-% Set to FALSE if running automatically (from script) or you've been
-% running it manually and have just run IngestManager and data objects are
-% still in memory.
+%% Find intervals
 if params.RUN.FIND_INITIAL_INTERVALS
 
     %% make shorter for testing:
@@ -57,9 +54,7 @@ if params.RUN.FIND_INITIAL_INTERVALS
     % a.time = a.time(1:10000,:);
     % c.data = c.data(1:10000,:);
     % c.time = c.time(1:10000,:);
-    %% ----------------------------------------------------------------------
-    % a AND c DATA SECTION
-    % -----------------------------------------------------------------------
+
     % Make an initial plot of a data, alongside valve data, if available
     % Set ylim manually if needed
     if params.RUN.CREATE_DEBUG_PLOTS
@@ -80,108 +75,142 @@ if params.RUN.FIND_INITIAL_INTERVALS
         dynamicDateTicks;
     end  %#params.RUN.CREATE_DEBUG_PLOTS
 
-    %% ----------------------------------------------------------------------
-    % Smooth a and c data, find the running medians and then ue the running 
-    % medians to find the transitions between FSW and TSW
-
-    allData.aData.setSmoothData();
-    allData.aData.setRunningMeds(params.PREPROCESS.PP_TIMESPAN, params.PREPROCESS.SAMPLING_FREQ);   
-
-    allData.aData.findAndSetTransitionPoints('TSW')
-    allData.aData.findAndSetTransitionPoints('FSW')
-
-    % plot TSW/FSW transitions to check
-    if params.RUN.CREATE_DEBUG_PLOTS
-        figure(21)
-        hold on;
-        grid on;
-        allData.aData.plotSmoothData();
-        allData.aData.plotRunningMeds();
-        allData.aData.plotInitFSWTransitions();
-        allData.aData.plotInitTSWTransitions();
-    end;
-
-    %% c data
-    % smooth data, find the running medians and then find the transitions
-    % between FSW and TSW
-    allData.cData.setSmoothData();
-    allData.cData.setRunningMeds(params.PREPROCESS.PP_TIMESPAN, params.PREPROCESS.SAMPLING_FREQ);
-    allData.cData.findAndSetTransitionPoints('TSW')
-    allData.cData.findAndSetTransitionPoints('FSW')
-    
-    % plot TSW/FSW transitions to check
-    if params.RUN.CREATE_DEBUG_PLOTS
-        figure(22)
-        allData.cData.plotSmoothData();
-        allData.cData.plotRunningMeds();
-        allData.cData.plotInitFSWTransitions()
-        allData.cData.plotInitTSWTransitions()
-    end;
-    %% ----------------------------------------------------------------------
-    % FLOW AND VALVE SECTION
-    % -----------------------------------------------------------------------
-
     %% if there is valve on/off information available, use it to mark the 
     % transition periods, rather than identifying them from the actual data
-
-    if  params.PREPROCESS.VALVE_AVAILABLE
+    if  params.PREPROCESS.USE_VALVE_DATA
 
         allData.ValveData.findTransitions();
         if params.RUN.CREATE_DEBUG_PLOTS
             allData.ValveData.plotTransitions();
         end;
 
-        if params.PREPROCESS.USE_VALVE_AND_FLOW
+        if params.PREPROCESS.USE_VALVE_FOR_FLOW_TRANSITIONS
 
             % set transition points for flow by using those from valve
             allData.FlowData.setTransitions( allData.ValveData.TransStartData, ...
-                allData.ValveData.TransEndData, allData.ValveData.TransStartTime, allData.ValveData.TransEndTime )
+                allData.ValveData.TransEndData, allData.ValveData.TransStartTime, ...
+                allData.ValveData.TransEndTime )
             if params.RUN.CREATE_DEBUG_PLOTS
                 allData.FlowData.plotTransitions()
             end;
-
         else
-            L.info('PreProcessingManager', 'Not using valve or flow data');
-        end   % end if USE_VALVE_AND_FLOW
-    else
-        L.info('PreProcessingManager','No valve data available');
-    end   % end if VALVE_AVAILABLE
+            L.info('PreProcessingManager', 'Not using valve to set flow transitions');
+        end;  %if params.PREPROCESS.USE_VALVE_FOR_FLOW_TRANSITIONS
+        
+        if params.PREPROCESS.USE_VALVE_FOR_AC_TRANSITIONS
+            % valve start/end times are for FSW
+            one_min = datenum(0,0,0,0,1,0);
+            two_min = datenum(0,0,0,0,2,0);
+            thirty_secs = datenum(0,0,0,0,0,30);
+            
+            ValveOn = allData.ValveData.TransStartTime;
+            ValveOff = allData.ValveData.TransEndTime;
+            
+            allData.aData.setGoodTransitions(ValveOn + two_min, ...
+                ValveOff - thirty_secs, 'FSW', 'raw');
+            allData.cData.setGoodTransitions(ValveOn + two_min, ...
+                ValveOff - thirty_secs, 'FSW', 'raw');
 
-    %% ----------------------------------------------------------------------- 
-    % find transitions in FLOW -- WITHOUT valve data
-    % ------------------------------------------------------------------------
+            allData.aData.setGoodTransitions(ValveOff + two_min, ...
+                ValveOn - one_min, 'TSW', 'raw');
+            allData.cData.setGoodTransitions(ValveOff + two_min, ...
+                ValveOn - one_min, 'TSW', 'raw');              
+        else
+            L.info('PreProcessingManager', 'Not using valve to set ac');
+        end;
+    else   % params.PREPROCESS.USE_VALVE_DATA
+        L.info('PreProcessingManager', 'Valve not available.');
+    end;
+    if params.INGEST.FLOW_EXISTS
+            L.info('PreProcessingManager', 'Flow exists');
+        if params.PREPROCESS.USE_FLOW_DATA
 
-    if params.PREPROCESS.USE_FLOW_ONLY
+            % smooth the data
+            allData.FlowData.setSmoothData();
+            if params.RUN.CREATE_DEBUG_PLOTS
+                allData.FlowData.plotSmoothData();
+            end;
 
-        % smooth the data
-        allData.FlowData.setSmoothData();
+            allData.FlowData.setRunningMeds(params.PREPROCESS.FLOW_PP_TIMESPAN, params.PREPROCESS.SAMPLING_FREQ)
+            if params.RUN.CREATE_DEBUG_PLOTS
+                figure(12)
+
+                allData.FlowData.plotRunningMeds()
+            end;
+
+            % find transition times from running TSW median
+            allData.FlowData.findTransitions()
+            if params.RUN.CREATE_DEBUG_PLOTS
+                figure(23)
+                allData.FlowData.plotTransitions()
+            end;
+        else
+            L.info('PreProcessingManager', 'Not using flow to find flow transitions');
+        end;
+        if params.PREPROCESS.USE_FLOW_FOR_AC_TRANSITIONS
+            L.info('PreProcessingManager', 'Using flow to find ac transitions');
+            
+        else
+            L.info('PreProcessingManager', 'Not using flow to find ac transitions');
+        end;
+    end;   %FLOW_EXISTS
+    
+    if params.PREPROCESS.USE_AC_FOR_AC_TRANSITIONS
+            
+        % -------------------------------------------------------------
+        % a AND c DATA SECTION
+        % -------------------------------------------------------------
+        % -------------------------------------------------------------
+        % Smooth a and c data, find the running medians and then use the running 
+        % medians to find the transitions between FSW and TSW
+
+        % a data
+
+        allData.aData.setSmoothData();
+        allData.aData.setRunningMeds(params.PREPROCESS.PP_TIMESPAN, ...
+            params.PREPROCESS.SAMPLING_FREQ);   
+
+        allData.aData.findAndSetTransitionPoints('TSW')
+        allData.aData.findAndSetTransitionPoints('FSW')
+
+        % plot TSW/FSW transitions to check
         if params.RUN.CREATE_DEBUG_PLOTS
-            allData.FlowData.plotSmoothData();
+            figure(21)
+            hold on;
+            grid on;
+            allData.aData.plotSmoothData();
+            allData.aData.plotRunningMeds();
+            allData.aData.plotInitFSWTransitions();
+            allData.aData.plotInitTSWTransitions();
         end;
 
-        allData.FlowData.setRunningMeds(params.PREPROCESS.FLOW_PP_TIMESPAN, params.PREPROCESS.SAMPLING_FREQ)
-        if params.RUN.CREATE_DEBUG_PLOTS
-            figure(12)
+        % c data
 
-            allData.FlowData.plotRunningMeds()
+        allData.cData.setSmoothData();
+        allData.cData.setRunningMeds(params.PREPROCESS.PP_TIMESPAN, ...
+            params.PREPROCESS.SAMPLING_FREQ);
+        allData.cData.findAndSetTransitionPoints('TSW')
+        allData.cData.findAndSetTransitionPoints('FSW')
+
+        % plot TSW/FSW transitions to check
+        if params.RUN.CREATE_DEBUG_PLOTS
+            figure(22)
+            allData.cData.plotSmoothData();
+            allData.cData.plotRunningMeds();
+            allData.cData.plotInitFSWTransitions()
+            allData.cData.plotInitTSWTransitions()
         end;
 
-        % find transition times from running TSW median
-        allData.FlowData.findTransitions()
-        if params.RUN.CREATE_DEBUG_PLOTS
-            figure(23)
-            allData.FlowData.plotTransitions()
-        end;
-
-    end   % if USE_FLOW_ONLY
-
+    end;  % IF USE_FLOW_FOR_AC_TRANSITIONS
+    
     % save current as mat file
     matFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
         strcat('acsPREPROC_PARTIAL', '_', num2str(params.INGEST.YEAR), ...
         '_', num2str(params.INGEST.YEAR_DAY)));
     save( matFileName, 'allData');
     clear matFileName;
-else
+
+else  % if params.RUN.FIND_INITIAL_INTERVALS
     
     L.info('PreProcessingManager', 'Skipping finding intitial intervals');
     matFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, ...
@@ -191,12 +220,14 @@ else
     clear matFileName;
 end % if FIND_INITIAL_INTERVALS
 
-%% TRANSITIONS START HERE
+
+%% CHECKING TRANSITIONS 
 % find first good transition for flow, a/c
-if params.INGEST.FLOW_EXISTS && params.PREPROCESS.USE_VALVE_AND_FLOW
+if params.PREPROCESS.USE_FLOW_DATA || params.PREPROCESS.USE_VALVE_FOR_FLOW_TRANSITIONS
     L.info('PreProcessingManager','Calling allData.FlowData.checkTransitions()');
     %FSWFreq, FSWDuration
-    allData.FlowData.checkTransitions(params.PREPROCESS.TSW_DURATION, params.PREPREPROCESS.FSW_DURATION)
+    allData.FlowData.checkTransitions(params.PREPROCESS.TSW_DURATION, ...
+        params.PREPROCESS.FSW_DURATION)
 else
     L.info('PreProcessingManager','No flow data to check transitions on');
 end;
@@ -221,7 +252,7 @@ if (params.RUN.MANUAL_MODE && params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS) ...
         params.PREPROCESS.FSW_DUR_TOLERANCE, params.PREPROCESS.CYCLE_FREQ, ...
         params.PREPROCESS.FREQ_TOLERANCE );
 
-    allData.aData.setGoodTransitions(goodStartTimes, goodEndTimes, 'FSW');
+    allData.aData.setGoodTransitions(goodStartTimes, goodEndTimes, 'FSW','preprocessed');
     
     % check and set aTSW transitions ----------------------------------------------
         [ goodStartsOut, goodEndsOut ] = ...
@@ -233,7 +264,7 @@ if (params.RUN.MANUAL_MODE && params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS) ...
         params.PREPROCESS.TSW_DUR_TOLERANCE, params.PREPROCESS.CYCLE_FREQ, ...
         params.PREPROCESS.FREQ_TOLERANCE );
 
-    allData.aData.setGoodTransitions(goodStartTimes, goodEndTimes, 'TSW');
+    allData.aData.setGoodTransitions(goodStartTimes, goodEndTimes, 'TSW', 'preprocessed');
   
     % check cFSW transitions -----------------------------------------------
     
@@ -248,7 +279,7 @@ if (params.RUN.MANUAL_MODE && params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS) ...
         params.PREPROCESS.FSW_DUR_TOLERANCE, params.PREPROCESS.CYCLE_FREQ, ...
         params.PREPROCESS.FREQ_TOLERANCE );
 
-    allData.cData.setGoodTransitions(goodStartTimes, goodEndTimes, 'FSW');
+    allData.cData.setGoodTransitions(goodStartTimes, goodEndTimes, 'FSW', 'preprocessed');
     
     % check and set cTSW transitions ----------------------------------------------
         [ goodStartsOut, goodEndsOut ] = ...
@@ -260,7 +291,7 @@ if (params.RUN.MANUAL_MODE && params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS) ...
         params.PREPROCESS.TSW_DUR_TOLERANCE, params.PREPROCESS.CYCLE_FREQ, ...
         params.PREPROCESS.FREQ_TOLERANCE );
 
-    allData.cData.setGoodTransitions(goodStartTimes, goodEndTimes, 'TSW');
+    allData.cData.setGoodTransitions(goodStartTimes, goodEndTimes, 'TSW', 'preprocessed');
     
 else
     L.info('PreProcessingManager','Not using automatic transtions, using manually-set');
@@ -289,38 +320,31 @@ if params.INGEST.FLOW_EXISTS
     grid on;
     allData.cData.plotData();
     plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
-    allData.cData.plotInitFSWTransitions();
-    allData.cData.plotInitTSWTransitions();
     if params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS
-        allData.cData.plotFSWGoodTransitions();
         allData.cData.plotTSWGoodTransitions();
+        legend('c data', 'valve data', 'identified checked TSW periods - start', ...
+        'identified checked TSW periods - end');
+    else
+        allData.cData.plotInitTSWTransitions();
+        legend('c data', 'valve data', 'identified initial TSW periods - start', ...
+        'identified initial TSW periods - end');        
     end;
-    legend('c data', 'valve data', 'identified FSW periods - start', ...
-        'identified FSW periods - end',  ...
-        'identified TSW periods - start', ...
-        'identified TSW periods - end',...
-        'good FSW transition start', 'good FSW transition end', ...
-        'good TSW transition start', 'good TSW transition end');
-
 else
     figure(24)
     hold on;
     grid on;
     allData.cData.plotData();
-    allData.cData.plotInitFSWTransitions();
-    allData.cData.plotInitTSWTransitions();
     if params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS
-        allData.cData.plotFSWGoodTransitions();
         allData.cData.plotTSWGoodTransitions();
+        legend('c data', 'identified checked TSW periods - start', ...
+        'identified checked TSW periods - end');
+    else
+        allData.cData.plotInitTSWTransitions();
+        legend('c data', 'identified initial TSW periods - start', ...
+        'identified initial TSW periods - end');        
     end;
-    legend('c data', 'identified FSW periods - start', ...
-        'identified FSW periods - end',  ...
-        'identified TSW periods - start', ...
-        'identified TSW periods - end',...
-        'good FSW transition start', 'good FSW transition end', ...
-        'good TSW transition start', 'good TSW transition end');
 end;
-saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_c_transitions')));
+saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_cTSW_transitions')));
 
 %% <-------------MANUAL PROCESSING CONTINUES HERE------------------------->
 if params.RUN.MANUAL_MODE || params.RUN.REPROCESS_MANUAL
@@ -384,10 +408,42 @@ if params.RUN.MANUAL_MODE || params.RUN.REPROCESS_MANUAL
     % NOT FILTERING BECAUSE SET MANUALLY
 
     % call method to assign good starts
-    allData.cData.setGoodTransitions(goodStarts, goodEnds, 'TSW');
+    allData.cData.setGoodTransitions(goodStarts, goodEnds, 'TSW', 'preprocessed');
 
     L.info('PreProcessingManager', 'Reprocessing MANUAL_MODE, done with cTSW');
-        
+    %%
+    if params.INGEST.FLOW_EXISTS
+        figure(25)
+        hold on;
+        grid on;
+        allData.cData.plotData();
+        plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
+        if params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS
+            allData.cData.plotFSWGoodTransitions();
+            legend('c data', 'valve data', 'identified checked FSW periods - start', ...
+            'identified checked FSW periods - end');
+        else
+            allData.cData.plotInitFSWTransitions();
+            legend('c data', 'valve data', 'identified initial FSW periods - start', ...
+            'identified initial FSW periods - end');        
+        end;
+    else
+        figure(25)
+        hold on;
+        grid on;
+        allData.cData.plotData();
+        if params.RUN.MANUALLY_EDIT_CHECKED_TRANSITIONS
+            allData.cData.plotFSWGoodTransitions();
+            legend('c data', 'identified checked FSW periods - start', ...
+            'identified checked FSW periods - end');
+        else
+            allData.cData.plotInitFSWTransitions();
+            legend('c data', 'identified initial FSW periods - start', ...
+            'identified initial FSW periods - end');        
+        end;
+    end;
+    saveas(gcf,  fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, strcat(num2str(params.INGEST.YEAR_DAY), '_cFSW_transitions')));
+
     %% ------- SECTION 2 - c FSW- PART 1A-----------------
     % 5.  "RUN AND ADVANCE" FROM HERE
     % ---------------------------------------------------
@@ -439,7 +495,7 @@ if params.RUN.MANUAL_MODE || params.RUN.REPROCESS_MANUAL
         cFSWTransitions.endTimestamps, allData.aData.DataObject.Time );
 
     % call method to assign good ends
-    allData.cData.setGoodTransitions(goodStarts, goodEnds, 'FSW');
+    allData.cData.setGoodTransitions(goodStarts, goodEnds, 'FSW', 'preprocessed');
 
     L.info('PreProcessingManager', 'Reprocessing MANUAL_MODE, done with cFSW');
 
@@ -533,7 +589,7 @@ if params.RUN.MANUAL_MODE || params.RUN.REPROCESS_MANUAL
         aTSWTransitions.endTimestamps, allData.aData.DataObject.Time );
 
     % call method to assign good starts
-    allData.aData.setGoodTransitions(goodStarts, goodEnds, 'TSW');
+    allData.aData.setGoodTransitions(goodStarts, goodEnds, 'TSW', 'preprocessed');
 
     %% ------- SECTION 4 - a FSW- PART 1A-----------------
     % 12.  "RUN AND ADVANCE" FROM HERE
@@ -583,7 +639,7 @@ if params.RUN.MANUAL_MODE || params.RUN.REPROCESS_MANUAL
         aFSWTransitions.endTimestamps, allData.aData.DataObject.Time );
 
     % call method to assign good starts & ends
-    allData.aData.setGoodTransitions(goodStarts, goodEnds, 'FSW');
+    allData.aData.setGoodTransitions(goodStarts, goodEnds, 'FSW', 'preprocessed');
 
 end;  %if params.RUN.MANUAL_MODE
 
@@ -591,8 +647,6 @@ end;  %if params.RUN.MANUAL_MODE
 %  IF YOU HAVE BEEN RUNNING MANUALLY, RUN AND ADVANCE THROUGH EACH SECTION
 %  BELOW:
 % <----------------------------------------------------------------------->
-%%
-
 
 %%
 % plot to show how a and c data are lined up
@@ -664,7 +718,7 @@ end; %if params.RUN.CREATE_DEBUG_PLOTS
 
 %% SYNCHRONIZE Data
 
-if params.INGEST.FLOW_EXISTS && params.PREPROCESS.USE_VALVE_AND_FLOW
+if params.INGEST.FLOW_EXISTS && params.PREPROCESS.SYNC_AC_TO_FLOW
 L.info('PreProcessingManager', 'Flow data exists for syncing to');
     allData.aData.syncTo(allData.FlowData);
     allData.cData.syncTo(allData.FlowData);

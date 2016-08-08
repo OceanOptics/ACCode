@@ -39,7 +39,7 @@ if params.RUN.LOAD_CHECK_DATA_FROM_DISK
 end;
 
 %get wavelengths
-wavelengths = pd.var.ap.L8.wavelengths_slade;
+wavelengths = pd.var.ap.L7.wavelengths_slade;
 sb_fname_ascii = [params.OUTPUT.SEABASS_FILE_PREFIX ...
     num2str(params.INGEST.YEAR) '_' num2str(params.INGEST.YEAR_DAY)];
 
@@ -65,8 +65,6 @@ for iData = 1:length(dataFiles)
     lon = datamatrix(:,4);
     Wt = datamatrix(:,5);
     sal = datamatrix(:,6);
-%     numericCells = datamatrix(:,7:end-1);
-
     numWavelengths = length(wavelengths);  
     endColumn = 7 + numWavelengths - 1;
     numericCells = datamatrix(:,7:endColumn);

@@ -176,7 +176,6 @@ function [cpCorr, fiterr] = AttTempCorr(cpUncorrIn, wavelengthsIn, psiTIn, metho
                     % x1(1) is amplitude
                     % x1(2) is slope
                     deltaTOut(:,:) = x1(3); % deltaT
-              
                     cpCorr(k,:) = cpUncorrIn(k,:) - psiTIn.*deltaTOut(k);
                     
                     L.debug('AttTempCorr', sprintf('k=%s, deltaT=%s, err=%s', ...

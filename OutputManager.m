@@ -19,7 +19,8 @@
 % Website: http://misclab.umeoce.maine.edu/index.php
 % May 2015; Last revision: 4-Mar-16
 % June 2016 - added bin_count and units to output files.
-% 
+% July 2016 - changed to use new data
+% Aug 2016 - removed bin_count wavelength-specific columns.
 
 %----------------------------- BEGIN CODE ---------------------------------
 %%Load data file from disk if necessary
@@ -51,11 +52,12 @@ end;
 
 % get variables needed for output:
 % ap, cp, ap_std, cp_std
-% get timestamps
+% get timestamps - % this should be coming from L9 now.
 ap_timestamps = pd.getVar('name', 'ap', 'data', 'timestamps');
 cp_timestamps = pd.getVar('name', 'cp', 'data', 'timestamps');
 
 % get ap - for each correction - more than one correction is possible
+% this should be coming from L9 now.
 if params.PROCESS.SCATTERING_CORR_SLADE
     ap_data_slade = pd.getVar('name', 'ap', 'data', 'data_slade'); %, 'level', 'corrected');
 end;
@@ -66,29 +68,34 @@ if params.PROCESS.SCATTERING_CORR_FLAT
     ap_data_flat = pd.getVar('name', 'ap', 'data', 'data_flat'); %, 'level', 'corrected');
 end;
 
-% get cp
-cp_data = pd.getVar('name', 'cp', 'data', 'data'); %, 'level', 'corrected');
+% get cp - this should be coming from L9 now.
+cp_data = pd.getVar('name', 'cp', 'data', 'cp_data'); %, 'level', 'corrected');
 
 % get ap uncertainty
 % there can be more than one correction calculated - but we can only report
 % one to seabass
-if params.PROCESS.AP_UNCERTAINTY_BETWEEN_CORRECTIONS
-    ap_uncertainty = pd.getVar('name', 'ap', 'data', 'uncertainty_between_corrections', 'level', 'corrected');
-else
-    ap_uncertainty = pd.getVar('name', 'ap', 'data', 'uncertainty', 'level', 'corrected');
-end;
+% July2016 - Not using this anymore for SeaBASS
+% if params.PROCESS.AP_UNCERTAINTY_BETWEEN_CORRECTIONS
+%     ap_uncertainty = pd.getVar('name', 'ap', 'data', 'uncertainty_between_corrections', 'level', 'corrected');
+% else
+%     ap_uncertainty = pd.getVar('name', 'ap', 'data', 'uncertainty', 'level', 'corrected');
+% end;
     
 % get cp uncertainty
-cp_uncertainty = pd.getVar('name', 'cp', 'data', 'uncertainty');
+% July2016 - Not using this anymore for SeaBASS
+% cp_uncertainty = pd.getVar('name', 'cp', 'data', 'uncertainty');
 
 % added 3/3
 % get std
-cp_std_to_print = pd.getVar('name', 'cp', 'data', 'std');
-ap_std_to_print = pd.getVar('name', 'ap', 'data', 'std');
+cp_std_to_print = pd.getVar('name', 'cp', 'data', 'cp_std');
+ap_std_to_print = pd.getVar('name', 'ap', 'data', 'ap_std');
 
 % added 4/5/16
-cp_bin_count = pd.getVar('name', 'cp', 'data', 'binCount');
-ap_bin_count = pd.getVar('name', 'ap', 'data', 'binCount');
+% JULY 16 - THIS NEEDS TO BE DESPIKED DATA BIN COUNT
+cp_bin_count = pd.getVar('name', 'cp', 'data', 'cp_bin_count');
+cp_bin_count = cp_bin_count(:,1);
+ap_bin_count = pd.getVar('name', 'ap', 'data', 'ap_bin_count');
+ap_bin_count = ap_bin_count(:,1);
 
 % GET ANCILLARY DATA: Temperature, Salinity, GPS
 temp_data = allData.TemperatureData.var.L3.BinnedLabTempData;
@@ -100,8 +107,7 @@ lon_data = allData.GPSData.var.L3.BinnedLonData;
 gps_timestamps = allData.GPSData.var.L3.BinnedTimestamps;
 
 % should all be the same
-wavelengths = pd.var.ap.L8.wavelengths_slade;
-
+wavelengths = pd.var.ap.L7.wavelengths_slade;
 
 %%
 % check timestamps are all the same
@@ -256,11 +262,7 @@ for iData = 1:length(data_type)
     apcp_units = char(repmat(uint8(strcat(params.INGEST.AC_UNITS, ',')),...
         1, 2*(length(wavelengths))));
     % create units for bin_count
-    bin_units = char(repmat(uint8(strcat('none',',')),...
-        1, 2*(length(wavelengths))));
-    units_to_print = strcat(apcp_units, bin_units);
-
-    units_to_print(length(units_to_print)) = '';
+    units_to_print = strcat(apcp_units, 'none');
 
 
     
@@ -271,8 +273,7 @@ for iData = 1:length(data_type)
     sb_hdr = {'date', 'time', 'lat', 'lon', 'Wt', 'sal'};
     % put all these fields into a matrix
     sb_hdr = [sb_hdr strcat(thisPrefix, cellstr(num2str(wavelengths)))' ...
-        strcat(thisPrefix, cellstr(num2str(wavelengths)), '_sd')'...
-        strcat(thisPrefix, cellstr(num2str(wavelengths)), '_bincount')'];
+        strcat(thisPrefix, cellstr(num2str(wavelengths)), '_sd')' 'bincount'];
     % remove whitespace
     sb_hdr = strrep(sb_hdr, ' ', '');
 
@@ -369,7 +370,6 @@ dynamicDateTicks;
 xlim([ datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY, 0, 0, 0) ,...
        datenum(params.INGEST.YEAR, params.INGEST.MONTH, params.INGEST.DAY + 1, 0, 0, 0) ] );
 % ylim([-0.1, .5])
-% legend('Synchronized c data', 'FSW Bins', 'Interpolated data');
 legend('Synchronized c data', 'FSW Bins');
 title_text = sprintf('Filtered c Data - using median\n Cruise: %s Leg: %s \n%u-%s-%u (Yearday: %u)', ...
     params.INGEST.CRUISE, params.INGEST.CRUISE_LEG, params.INGEST.DAY, ...
@@ -451,7 +451,7 @@ fignum=43;
 figure(fignum)
 hold on;
 grid on;
-plot(pd.var.ap.L8.wavelengths_slade, pd.var.ap.L9.data_slade);
+plot(pd.var.ap.L7.wavelengths_slade, pd.var.ap.L9.data_slade);
 xlabel('Wavelength')
 ylabel('ap - corrected using Slade')
 title_text = sprintf('Corrected ap vs. Wavelength\n Cruise: %s Leg: %s \n%u-%s-%u (Yearday: %u)', ...
@@ -469,7 +469,7 @@ fignum=44;
 figure(fignum)
 hold on;
 grid on;
-plot(pd.var.ap.L8.wavelengths_rottgers, pd.var.ap.L9.data_rottgers);
+plot(pd.var.ap.L7.wavelengths_rottgers, pd.var.ap.L9.data_rottgers);
 xlabel('Wavelength')
 ylabel('ap - corrected using Rottgers')
 title_text = sprintf('Corrected ap vs. Wavelength\n Cruise: %s Leg: %s \n%u-%s-%u (Yearday: %u)', ...
@@ -487,7 +487,7 @@ fignum=45;
 figure(fignum)
 hold on;
 grid on;
-plot(pd.var.cp.L8.wavelengths, pd.var.cp.L9.data);
+plot(pd.var.cp.L7.wavelengths, pd.var.cp.L9.cp_data);
 xlabel('Wavelength')
 ylabel('cp - corrected')
 title_text = sprintf('Corrected cp vs. Wavelength\n Cruise: %s Leg: %s \n%u-%s-%u (Yearday: %u)', ...
