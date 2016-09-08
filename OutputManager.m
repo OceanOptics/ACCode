@@ -313,7 +313,23 @@ for iData = 1:length(data_type)
         fprintf(fid,'/wave_height=NA\n');
         fprintf(fid,'/missing=-9999\n');
         fprintf(fid,'/delimiter=space\n');
-
+        % new 9/8/16
+        fprintf(fid, '!\n');
+        fprintf(fid, '! COMMENTS\n');
+        fprintf(fid, '!\n');
+        fprintf(fid, '! Filters used for designating bins as SUSPECT:\n');
+        comment_1 = 'abs(TSW_bin_median - TSW_bin_mean))./(TSW_bin_median-FSW_interp_median) > max(';
+        comment_2 = ', ';
+        comment_3 = ' ./(TSW_bin_median-FSW_interp_median))';
+        fprintf(fid, '! mean/median filter:');
+        fprintf(fid, '%s %5.3f %s %5.3f %s\n', comment_1, ...
+            params.PROCESS.MEAN_MEDIAN_FILTER_1, ...
+            comment_2, params.PROCESS.MEAN_MEDIAN_FILTER_2, ...
+            comment_3);
+        fprintf(fid, '! std filter: std_fail_index = TSW_bin_std > stdThreshold\n');
+        fprintf(fid, '! where stdThreshold = %5.3f for a and %5.3f for c\n', ...
+            params.PROCESS.a_STD_THRESH, params.PROCESS.c_STD_THRESH);
+        fprintf(fid, '!\n');
         fprintf(fid,'/fields=');
         for j=1:length(sb_hdr)
             if j < length(sb_hdr)
