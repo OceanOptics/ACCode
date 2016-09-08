@@ -1773,10 +1773,16 @@ classdef ProcessedData < handle
                 binFlags(:,:) = 1; % 1 == good
             
                 % 3.  Filter 1 - mean median filter
+%                 mean_median_fail_index = ...
+%                     (abs(TSW_bin_median - TSW_bin_mean))./(TSW_bin_median-FSW_interp_median) ...
+%                     > max(0.3 , 0.001./(TSW_bin_median-FSW_interp_median));
+% disp(obj.meta.Params.PROCESS.MEAN_MEDIAN_FILTER);
+%                 9/8/2016: added code to pull these variables from params
                 mean_median_fail_index = ...
                     (abs(TSW_bin_median - TSW_bin_mean))./(TSW_bin_median-FSW_interp_median) ...
-                    > max(0.3 , 0.001./(TSW_bin_median-FSW_interp_median));
-                
+                    > max( obj.meta.Params.PROCESS.MEAN_MEDIAN_FILTER_1, obj.meta.Params.PROCESS.MEAN_MEDIAN_FILTER_2...
+                    ./(TSW_bin_median-FSW_interp_median));
+
                 if sum(sum(mean_median_fail_index)) > 0                   
                     binFlags(mean_median_fail_index) = 3; % suspect
 
