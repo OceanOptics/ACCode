@@ -16,7 +16,9 @@ function NAAMES01ACSapcp2015332ap = importfile1(filename, startRow, endRow)
 %% Initialize variables.
 delimiter = {',',' '};
 if nargin<=2
-    startRow = 32;
+    % changed when added comments to header in OutputManager
+    %     startRow = 32;
+    startRow = 40;
     endRow = inf;
 end
 
