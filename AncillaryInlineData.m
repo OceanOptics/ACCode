@@ -45,7 +45,7 @@ classdef AncillaryInlineData < AncillaryData
             
            end
            
-                   function setSmoothData(obj)
+        function setSmoothData(obj)
             
             obj.L.debug('AncillaryData.setSmoothData', 'start');            
             obj.SmoothData = filtfilt( ones(1,100)/100, 1, obj.DataObject.Data);
