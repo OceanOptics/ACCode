@@ -27,6 +27,7 @@ classdef ACDeviceFile < handle
     
     properties
        FileName
+       FileType
        DeviceName
        SerialNumber
        StructureVersionNumber
@@ -62,7 +63,7 @@ classdef ACDeviceFile < handle
     methods
      
         %%# ACDeviceFile
-         function obj = ACDeviceFile(fileNameIn)
+         function obj = ACDeviceFile(fileNameIn, fileTypeIn)
             
             % ACDeviceFile creates an object holding all info from a
             %device file
@@ -84,7 +85,11 @@ classdef ACDeviceFile < handle
                 else
                     L.error('ACDeviceFile.ACDeviceFile', 'Need file name');
                 end   
-                
+                if ~isempty( fileTypeIn ) 
+                    obj.FileType = fileTypeIn;
+                else
+                    L.error('ACDeviceFile.ACDeviceFile', 'Need file name');
+                end                   
                 
                 fid = fopen(fileNameIn);
                 
@@ -93,7 +98,13 @@ classdef ACDeviceFile < handle
                 else
                       
                     %% Read first 9 lines of file
-                    Intro = textscan( fid, '%s', 9, 'Delimiter', '\n');
+                    if strcmp(obj.FileType, 'WAP')
+                        Header = textscan( fid, '%s', 1, 'Delimiter', '\n');
+                        Intro = textscan( fid, '%s', 9, 'Delimiter', '\n');
+  
+                    else
+                        Intro = textscan( fid, '%s', 9, 'Delimiter', '\n');
+                    end;
 
                     % set device name
                     obj.DeviceName = strtrim(Intro{1}{1});
