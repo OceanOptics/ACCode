@@ -62,11 +62,12 @@ if params.RUN.FIND_INITIAL_INTERVALS
         hold on
         grid on
         plot(allData.aData.DataObject.Time(:,:), allData.aData.DataObject.Data(:, 20), 'b');
-        if params.INGEST.FLOW_EXISTS
+        if params.INGEST.VALVE_EXISTS
             plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'g');
             legend('a data', 'valve data');
             title('a data & valve data - unsynchronized');
-        %     ylim([-.20, .25])
+            % Set ylim here:
+            %     ylim([-.20, .25])
         else
             legend('a data');
             title('a data - No valve data exists');
@@ -314,7 +315,7 @@ end;
 % -------------------------------------------------------------------------
 % -------------------------------------------------------------------------
 % -------------------------------------------------------------------------
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.VALVE_EXISTS
     figure(24)
     hold on;
     grid on;
@@ -651,7 +652,7 @@ end;  %if params.RUN.MANUAL_MODE
 %%
 % plot to show how a and c data are lined up
 if params.RUN.CREATE_DEBUG_PLOTS
-    if params.INGEST.FLOW_EXISTS
+    if params.INGEST.VALVE_EXISTS
         figure(26)
         hold on;
         grid on;
@@ -684,7 +685,7 @@ if params.RUN.CREATE_DEBUG_PLOTS
 end;  %params.RUN.CREATE_DEBUG_PLOTS
 
 if params.RUN.CREATE_DEBUG_PLOTS
-    if params.INGEST.FLOW_EXISTS
+    if params.INGEST.VALVE_EXISTS
         figure(27)
         hold on;
         grid on;
@@ -750,7 +751,7 @@ grid on;
 dynamicDateTicks;
 allData.aData.plotFSWGoodTransitions();
 allData.aData.plotTSWGoodTransitions();
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.VALVE_EXISTS
     plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
 %     ylim([0,.15])
 end
@@ -763,11 +764,11 @@ grid on;
 dynamicDateTicks;
 allData.cData.plotFSWGoodTransitions();
 allData.cData.plotTSWGoodTransitions();
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.VALVE_EXISTS
     plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
 %     ylim([0,.6])
 end
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.VALVE_EXISTS
     legend('sync c data', 'good fsw start', 'good fsw end' , 'good tsw start' , 'good tsw end', 'valve state')
 else
     legend('sync c data', 'good fsw start', 'good fsw end' , 'good tsw start' , 'good tsw end')
