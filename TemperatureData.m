@@ -133,7 +133,7 @@ classdef TemperatureData < AncillaryNonInlineData
   
             %disp('Stub for plotData() in TemperatureData:');
             ts = obj.DataObject;
-            plot(ts.Time, ts.Data(:,1), 'k.')
+            plot(ts.Time, ts.Data(:,1), 'm.')
             hold on
             scatter(ts.Time, ts.Data(:,2), 'b.')
             hold on
