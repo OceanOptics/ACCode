@@ -49,7 +49,7 @@ matFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, params.INGEST.DATA_O
 paramsFileName = fullfile(params.INGEST.DATA_OUTPUT_DIRECTORY, 'params');
 %% Create device file object
 L.debug('IngestManager', 'creating ACDeviceFile object');
-devFile = ACDeviceFile( params.INGEST.DEVICE_FILE_LOCATION );
+devFile = ACDeviceFile( params.INGEST.DEVICE_FILE_LOCATION, params.INGEST.DEVICE_FILE_TYPE );
 
 %% Start to ingest files
 % For each of the main data file types for this cruise, get a list of files for
@@ -180,7 +180,7 @@ dynamicDateTicks;
 xlabel('Time');
 ylabel('a Data');
 legend('a Data');
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.VALVE_EXISTS
     ax2 = subplot(3,1,2);
     dynamicDateTicks;
     plot(allData.ValveData.DataObject.Time, allData.ValveData.DataObject.Data, 'c');
@@ -194,11 +194,11 @@ scatter(allData.TemperatureData.DataObject.Time, allData.TemperatureData.DataObj
 xlabel('Time');
 ylabel('Temperature Data');
 legend('Temperature Data');
-if params.INGEST.FLOW_EXISTS
+if params.INGEST.VALVE_EXISTS
 
     linkaxes([ax1, ax2, ax3], 'x');
 else
-        linkaxes([ax1, ax3], 'x');
+    linkaxes([ax1, ax3], 'x');
 end
 
 %% close variables
