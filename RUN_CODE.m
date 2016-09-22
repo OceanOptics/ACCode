@@ -16,25 +16,19 @@
 % email address: wendy.neary@maine.edu 
 % Website: http://misclab.umeoce.maine.edu/index.php
 % Dec 2015; Last revision: 16-Feb-16
+% 21-Sep-16 - moved reference to IngestManager name to .ini file.
 
 %------------- BEGIN CODE --------------
 
-
-% close all preexisting figures
-% clear all variables and classes from workspace
-% close all;
-% clear all;
-% clear classes;
-
 % load the configuration variables set in the .ini file
-params = ini2struct('accode.ini');
+
+% UPDATE FOR A NEW PROJECT HERE:
+params = ini2struct('AMT_accode.ini');
 % get year days from params. params will be overwritten by other files.
 
-daysToRun = params.INGEST.YEAR_DAYS;
-% daysToRun = 200;
+daysToRun = params.RUN.YEAR_DAYS;
 
-% for each yearday listed in accode.ini
-% process data
+% for each yearday listed in accode.ini, process data
 for iYEAR_DAY = 1:length(daysToRun)
     
     if iYEAR_DAY > 1
@@ -42,7 +36,6 @@ for iYEAR_DAY = 1:length(daysToRun)
         clear allData;
         clear L;
         clear pd;
-%         params = ini2struct('accode.ini');
     end;
     
     % reassign
@@ -87,10 +80,6 @@ for iYEAR_DAY = 1:length(daysToRun)
     params.INGEST.DATA_OUTPUT_DIRECTORY = strcat(params.INGEST.DATA_OUTPUT_MAIN_DIRECTORY, ...
         num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY));
     
-    % Inputting data from a potentially different directory
-%     params.INGEST.DATA_INPUT_DIRECTORY = strcat(params.INGEST.DATA_INPUT_MAIN_DIRECTORY, ...
-%         num2str(params.INGEST.YEAR), '_', num2str(params.INGEST.YEAR_DAY));
-
     %%
     % create log file
     clear L;
@@ -115,7 +104,7 @@ for iYEAR_DAY = 1:length(daysToRun)
     %%  
     if params.RUN.INGEST
         disp('------------- Running IngestManager -------------');
-        run('IngestManager.m');
+        run(params.RUN.INGEST_MANAGER_NAME);
     else
         disp('Not running IngestManager');
     end;
