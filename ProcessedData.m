@@ -1813,9 +1813,22 @@ classdef ProcessedData < handle
                 % 4.  remove extra rows from flags
                 binFlags = removerows(binFlags, removeIndex);
                 
+                % 4a. Interpolate flags to 750 wl.
+                % get orig wl
+                thisWL = sprintf('%sWavelengths', dataType1{iType1});
+             
+              
+                % get variables - if c passed in this is for cp
+                wl = obj.meta.DeviceFile.(thisWL); 
+                wlEndAt750 = obj.getVar('name', thisType, 'data', 'wavelengths');
+
+                % get cut wl
+                binFlagsEndAt750 = interp1( wl, binFlags', wlEndAt750, 'linear', 'extrap');
+                binFlagsEndAt750 = binFlagsEndAt750';
+                
                 % 5. set flags
             
-                obj.setVar(thisType, 'unsmoothed', 'flags', binFlags );  
+                obj.setVar(thisType, 'unsmoothed', 'flags', binFlagsEndAt750 );  
                 obj.L.info('ProcessedData.applyFlags',...
                     sprintf('total # bins: %u', ...
                     sum(any(binFlags == 3,2)))); 
