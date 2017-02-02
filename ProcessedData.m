@@ -1269,6 +1269,7 @@ classdef ProcessedData < handle
         %#removeWLAfter750 - Removes WL after 750 nm for c because the lookup 
         %#                 - table for scattering correction ends at 750
         %#                 - (a will be interpolated to c)
+        %#                 - will also cut any wavleengths before 400
         %#                 - calls obj.cutWavelengths()
         %#correctSpectralBandMismatch - Deal with mismatch in spectral band positions between a and c measurements.
         %#                            - Interpolate a onto c, limiting range to where the two overlap
@@ -1323,16 +1324,27 @@ classdef ProcessedData < handle
             
             CUTOFF = 750;
             [rowIndex, ~] = find( wl > CUTOFF );
+            START_AT = 400;
+            [wl_before_400, ~] = find( wl < START_AT );
+            
             
             % make a copy of the wavelengths
-            if ~isempty(rowIndex)
+            if ~isempty(rowIndex) || ~isempty(wl_before_400)
                 
+                %make copy of wavelengths
                 wlEndAt750 = wl;
 
                 % for the new wavelengths, set the last wavelength over 750 to 750 and
                 % blank the rest
-                wlEndAt750(rowIndex(1)) = CUTOFF;
-                wlEndAt750(rowIndex(2:end)) = [];
+                if ~isempty(rowIndex)
+                    wlEndAt750(rowIndex(1)) = CUTOFF;
+                    wlEndAt750(rowIndex(2:end)) = [];
+                end;
+                if ~isempty(wl_before_400)
+                    wlEndAt750(wl_before_400) = [];
+                end;
+                
+                
                 
                 obj.L.debug('ProcessedData.cutWavelengths', ...
                     sprintf('wlEndAt750 size: %u x %u', size(wlEndAt750)));
