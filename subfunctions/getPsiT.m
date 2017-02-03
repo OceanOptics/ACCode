@@ -50,7 +50,8 @@ function [ psiT ] = getPsiT( fileNameIn, wavelengthsIn )
         % open file
         tmp = xlsread('Sullivan_etal_2006_instrumentspecific.xls');
         if ~isempty(tmp)
-            psiT = interp1(tmp(:,1),tmp(:,2), wavelengths);
+            % added extrap 11/4/16
+            psiT = interp1(tmp(:,1),tmp(:,2), wavelengths, 'linear', 'extrap');
         else
             L.error('getPsiT', 'Xlsread returned null');
         end;
