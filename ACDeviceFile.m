@@ -144,8 +144,13 @@ classdef ACDeviceFile < handle
                     obj.NumberTemperatureBins = strtrim(strtok(numTempBins, ';'));
 
                     %%  Read Temperature Bins
-                    TempBins = textscan( fid, strcat( repmat('%f', 1, str2num(obj.NumberTemperatureBins)), ' ; temperature bins'), 1, 'Delimiter', '\n\');
-                    obj.TemperatureBins = cell2mat(TempBins(:));
+                    if ~strcmp(obj.NumberTemperatureBins, '0')
+                        % read the next line
+                        TempBins = textscan( fid, strcat( repmat('%f', 1, str2num(obj.NumberTemperatureBins)), ' ; temperature bins'), 1, 'Delimiter', '\n\');
+                        obj.TemperatureBins = cell2mat(TempBins(:));
+                    else
+                        obj.TemperatureBins = textscan( fid, '0	;	temperature	bins');
+                    end;
 
                     %% Read wavelengths matrix
                     %  Size of matrix varies but follows this structure:
@@ -166,7 +171,11 @@ classdef ACDeviceFile < handle
                     numTotalBins = (numBins)*2;
                     numRows = str2num(obj.NumberWavelengths);
                     
-                    firstcolsSpec = '%s %s %s %10.6f %10.6f';
+                    if numTotalBins > 0
+                        firstcolsSpec = '%s %s %s %10.6f %10.6f';
+                    else
+                        firstcolsSpec = '%s %s %s\t%s\t%s\t';
+                    end;
                     endrowtext = ' "; C and A offset, and C and A temperature correction info"';
                     FormatString = strcat(firstcolsSpec, repmat('%f ', 1, numTotalBins), endrowtext);
                     
@@ -177,15 +186,16 @@ classdef ACDeviceFile < handle
                     obj.aWavelengths = cell2mat(tempCompValueMatrix{:,2});
                     obj.cWavelengths = str2num(obj.cWavelengths(:,2:end));
                     obj.aWavelengths = str2num(obj.aWavelengths(:,2:end));
-                    obj.cCleanWaterCalConstant = tempCompValueMatrix{:,4};
-                    obj.aCleanWaterCalConstant = tempCompValueMatrix{:,5};
-                    tempCompVals = tempCompValueMatrix(:,6:end);
-                    
-                    
-                    
-                    obj.cTempCompensationVals = cell2mat(tempCompVals(:, 1:numBins));
-                    obj.aTempCompensationVals = cell2mat(tempCompVals(:, startNextBin:end));
+                    if numTotalBins > 0
+                        obj.cCleanWaterCalConstant = tempCompValueMatrix{:,4};
+                        obj.aCleanWaterCalConstant = tempCompValueMatrix{:,5};
+                        tempCompVals = tempCompValueMatrix(:,6:end);
 
+
+
+                        obj.cTempCompensationVals = cell2mat(tempCompVals(:, 1:numBins));
+                        obj.aTempCompensationVals = cell2mat(tempCompVals(:, startNextBin:end));
+                    end;
                     %% Read Last line of file -- doesn't seem to contain any data
                     FooterFormatString = strcat( repmat('%f ', 1, 11), ' ; ', repmat(' %s ', 1, 11));
                     Footer = textscan( fid, FooterFormatString, 1);
