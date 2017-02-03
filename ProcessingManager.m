@@ -294,9 +294,6 @@ if pd.cExists == true
         L.debug('ProcessingManager', 'cExists == true; aExists == true');
         pd.attenuationCorr('WITHA');
         
-        if params.RUN.CREATE_DEBUG_PLOTS
-            pd.plotCpCorrVsUncorr( 39 );
-        end;
     else
         L.debug('ProcessingManager', 'cExists == true; aExists == false');
         % UNTESTED
@@ -327,8 +324,7 @@ if params.PROCESS.UNSMOOTH_DATA
         % DEBUG PLOT TO CHECK
         atsToUse = find( ~isnan(pd.var.ap.L8.data_slade(:,1)), 1, 'first');
         ctsToUse = find( ~isnan(pd.var.cp.L7.data(:,1)), 1, 'first');
-        pd.plotUnsmoothVsSmooth(311, atsToUse, ctsToUse);
-        
+%         pd.plotUnsmoothVsSmooth(311, atsToUse, ctsToUse);
     end;
 else
     L.info('ProcessingManager', 'Not doing unsmoothing');
